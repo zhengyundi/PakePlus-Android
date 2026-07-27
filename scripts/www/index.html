@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>价量拆分计算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #3d3d3d 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        .form-group label {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        .form-group input::-webkit-outer-spin-button,
+        .form-group input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .form-group input:focus {
+            border-color: #4ade80;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+        }
+
+        .form-group input:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .form-group input.error {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .calc-btn {
+            flex: 1;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: #064e3b;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .calc-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 222, 128, 0.4);
+        }
+
+        .calc-btn:active {
+            transform: translateY(0);
+        }
+
+        .reset-btn {
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .reset-btn:active {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 24px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+        }
+
+        .result-container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .result-container.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .result-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-container:not(.error) .result-title {
+            color: #4ade80;
+        }
+
+        .result-container.error .result-title {
+            color: #ef4444;
+        }
+
+        .result-icon {
+            font-size: 18px;
+        }
+
+        .result-content {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .result-content.error-text {
+            color: rgba(239, 68, 68, 0.9);
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .result-value {
+            color: #4ade80;
+            font-weight: 600;
+            font-size: 18px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* 验证对比模块样式 */
+        .verify-container {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 14px;
+            background: rgba(74, 222, 128, 0.06);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.4s ease;
+        }
+
+        .verify-container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .verify-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4ade80;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .verify-title svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .verify-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .verify-table thead th {
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+            text-align: center;
+            padding: 8px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+        }
+
+        .verify-table thead th:first-child {
+            text-align: left;
+        }
+
+        .verify-table tbody td {
+            color: rgba(255, 255, 255, 0.85);
+            padding: 10px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: center;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .verify-table tbody td:first-child {
+            text-align: left;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: inherit;
+        }
+
+        .verify-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .verify-table .match {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .verify-table .subtotal-row td {
+            background: rgba(255, 255, 255, 0.03);
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .verify-table .compare-row td {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            padding: 6px 6px;
+        }
+
+        .verify-table .compare-row td:nth-child(2),
+        .verify-table .compare-row td:nth-child(3),
+        .verify-table .compare-row td:nth-child(4) {
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .verify-summary {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed rgba(74, 222, 128, 0.25);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .verify-summary-label {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .verify-summary-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .verify-summary-status svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        @media (max-width: 420px) {
+            .verify-container {
+                margin-top: 16px;
+                padding: 16px 14px;
+            }
+
+            .verify-table {
+                font-size: 12px;
+            }
+
+            .verify-table thead th {
+                padding: 6px 4px;
+                font-size: 11px;
+            }
+
+            .verify-table tbody td {
+                padding: 8px 4px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 20px 16px;
+                max-width: 100%;
+                min-height: auto;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .header p {
+                font-size: 13px;
+            }
+
+            .form-group {
+                margin-bottom: 18px;
+            }
+
+            .form-group label {
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+
+            .form-group input {
+                padding: 16px 14px;
+                font-size: 16px;
+            }
+
+            .btn-group {
+                gap: 10px;
+                margin-top: 8px;
+            }
+
+            .calc-btn {
+                padding: 18px;
+                font-size: 17px;
+                margin-top: 0;
+            }
+
+            .reset-btn {
+                padding: 18px 20px;
+                font-size: 17px;
+            }
+
+            .result-container {
+                margin-top: 24px;
+                padding: 20px 16px;
+            }
+
+            .result-item {
+                padding: 10px 0;
+            }
+
+            .result-value {
+                font-size: 17px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>价量拆分计算器</h1>
+            <p>输入单价和总额，自动计算各商品数量</p>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>单价 p1</label>
+                <input type="number" id="p1" step="0.01" placeholder="例如 10">
+            </div>
+            <div class="form-group">
+                <label>单价 p2</label>
+                <input type="number" id="p2" step="0.01" placeholder="例如 20">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>总数量 total_q</label>
+                <input type="number" id="total_q" step="0.01" placeholder="例如 10">
+            </div>
+            <div class="form-group">
+                <label>总金额 total_amount</label>
+                <input type="number" id="total_amount" step="0.01" placeholder="例如 150">
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="calc-btn" onclick="calc()">开始计算</button>
+            <button class="reset-btn" onclick="reset()">重置</button>
+        </div>
+
+        <div id="result" class="result-container"></div>
+        <div id="verify" class="verify-container"></div>
+    </div>
+
+    <script>
+        function splitQuantities(p1, p2, total_q, total_amount) {
+            const eps = 1e-9;
+            if (Math.abs(p1 - p2) < eps) {
+                return null;
+            }
+            const denominator = p1 - p2;
+            const q1 = (total_amount - p2 * total_q) / denominator;
+            const q2 = total_q - q1;
+
+            if (q1 < -eps || q2 < -eps) {
+                return null;
+            }
+
+            const calcAmount = p1 * q1 + p2 * q2;
+            if (Math.abs(calcAmount - total_amount) > 1e-6) {
+                return null;
+            }
+
+            return [Math.round(q1 * 1000000) / 1000000, Math.round(q2 * 1000000) / 1000000];
+        }
+
+        function clearInputErrors() {
+            document.querySelectorAll('.form-group input').forEach(input => {
+                input.classList.remove('error');
+            });
+        }
+
+        function reset() {
+            document.getElementById('p1').value = '';
+            document.getElementById('p2').value = '';
+            document.getElementById('total_q').value = '';
+            document.getElementById('total_amount').value = '';
+            const resBox = document.getElementById('result');
+            resBox.classList.remove('show', 'error');
+            const verifyBox = document.getElementById('verify');
+            verifyBox.classList.remove('show');
+            clearInputErrors();
+        }
+
+        // 格式化数字显示
+        function fmt(num) {
+            return Number.isInteger(num) ? num.toString() : parseFloat(num.toFixed(6)).toString();
+        }
+
+        // 渲染验证对比模块
+        function renderVerify(p1, p2, total_q, total_amount, q1, q2) {
+            const verifyBox = document.getElementById('verify');
+            verifyBox.classList.remove('show');
+
+            // 计算各项金额：单价 × 数量 = 金额
+            const amount1 = p1 * q1;
+            const amount2 = p2 * q2;
+
+            // 两个数量相加、两个金额相加
+            const sumQ = q1 + q2;
+            const sumAmount = amount1 + amount2;
+            const sumAmountRounded = Math.round(sumAmount * 1000000) / 1000000;
+
+            // 对比输入值
+            const qMatch = Math.abs(sumQ - total_q) < 1e-6;
+            const amountMatch = Math.abs(sumAmountRounded - total_amount) < 1e-6;
+            const allMatch = qMatch && amountMatch;
+
+            verifyBox.innerHTML = `
+                <div class="verify-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <span>计算结果验证对比</span>
+                </div>
+                <table class="verify-table">
+                    <thead>
+                        <tr>
+                            <th>项目</th>
+                            <th>单价</th>
+                            <th>数量</th>
+                            <th>金额</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>商品1</td>
+                            <td>${fmt(p1)}</td>
+                            <td>${fmt(q1)}</td>
+                            <td>${fmt(amount1)}</td>
+                        </tr>
+                        <tr>
+                            <td>商品2</td>
+                            <td>${fmt(p2)}</td>
+                            <td>${fmt(q2)}</td>
+                            <td>${fmt(amount2)}</td>
+                        </tr>
+                        <tr class="subtotal-row">
+                            <td>合计</td>
+                            <td>—</td>
+                            <td>${fmt(sumQ)}</td>
+                            <td>${fmt(sumAmountRounded)}</td>
+                        </tr>
+                        <tr class="compare-row">
+                            <td>输入值</td>
+                            <td>—</td>
+                            <td>${fmt(total_q)}</td>
+                            <td>${fmt(total_amount)}</td>
+                        </tr>
+                        <tr class="compare-row">
+                            <td>对比</td>
+                            <td>—</td>
+                            <td class="match">${qMatch ? '✓ 一致' : '✗ 不一致'}</td>
+                            <td class="match">${amountMatch ? '✓ 一致' : '✗ 不一致'}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="verify-summary">
+                    <span class="verify-summary-label">综合验证结果</span>
+                    <span class="verify-summary-status">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        ${allMatch ? '验证通过' : '存在偏差'}
+                    </span>
+                </div>
+            `;
+            setTimeout(() => verifyBox.classList.add('show'), 100);
+        }
+
+        function calc() {
+            const p1Input = document.getElementById('p1');
+            const p2Input = document.getElementById('p2');
+            const total_qInput = document.getElementById('total_q');
+            const total_amountInput = document.getElementById('total_amount');
+            const p1 = parseFloat(p1Input.value);
+            const p2 = parseFloat(p2Input.value);
+            const total_q = parseFloat(total_qInput.value);
+            const total_amount = parseFloat(total_amountInput.value);
+            const resBox = document.getElementById('result');
+
+            resBox.classList.remove('show', 'error');
+            clearInputErrors();
+
+            let hasError = false;
+            if (isNaN(p1)) { p1Input.classList.add('error'); hasError = true; }
+            if (isNaN(p2)) { p2Input.classList.add('error'); hasError = true; }
+            if (isNaN(total_q)) { total_qInput.classList.add('error'); hasError = true; }
+            if (isNaN(total_amount)) { total_amountInput.classList.add('error'); hasError = true; }
+
+            if (hasError) {
+                resBox.innerHTML = `
+                    <div class="result-title">
+                        <span class="result-icon">⚠</span>
+                        <span>输入错误</span>
+                    </div>
+                    <div class="result-content error-text">请填写完整有效的数字</div>
+                `;
+                resBox.classList.add('error');
+                setTimeout(() => resBox.classList.add('show'), 50);
+                return;
+            }
+
+            const ret = splitQuantities(p1, p2, total_q, total_amount);
+            if (ret === null) {
+                resBox.innerHTML = `
+                    <div class="result-title">
+                        <span class="result-icon">✗</span>
+                        <span>计算失败</span>
+                    </div>
+                    <div class="result-content error-text">无合法唯一解<br>（单价相同 / 数量为负 / 金额不匹配）</div>
+                `;
+                resBox.classList.add('error');
+                setTimeout(() => resBox.classList.add('show'), 50);
+                const verifyBox = document.getElementById('verify');
+                verifyBox.classList.remove('show');
+            } else {
+                const [q1, q2] = ret;
+                resBox.innerHTML = `
+                    <div class="result-title">
+                        <span class="result-icon">✓</span>
+                        <span>计算结果</span>
+                    </div>
+                    <div class="result-content">
+                        <div class="result-item">
+                            <span class="result-label">商品1数量 q1</span>
+                            <span class="result-value">${q1}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">商品2数量 q2</span>
+                            <span class="result-value">${q2}</span>
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => resBox.classList.add('show'), 50);
+                renderVerify(p1, p2, total_q, total_amount, q1, q2);
+            }
+        }
+    </script>
+</body>
+</html>
