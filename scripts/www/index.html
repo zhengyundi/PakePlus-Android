@@ -36,7 +36,7 @@
   }
 
   .row-card {
-    background: #fff;
+    background: rgba(255, 255, 255, var(--input-alpha, 1));
     border: 2px solid #111;
     border-radius: 22px 18px 24px 16px;
     padding: 14px;
@@ -306,6 +306,58 @@
     box-shadow: 1px 1px 0 #111;
   }
 
+  /* 透明度调节 */
+  .settings-field {
+    margin-top: 14px;
+  }
+  .settings-field-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-bottom: 7px;
+  }
+  .settings-field-val {
+    font-size: 12px;
+    font-weight: 400;
+    color: #9a9a9a;
+  }
+  .settings-range {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 12px;
+    background: #fff;
+    border: 2px solid #111;
+    border-radius: 9px 7px 10px 6px;
+    box-shadow: 2px 2px 0 #111;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+  }
+  .settings-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border: 2px solid #111;
+    border-radius: 50%;
+    box-shadow: 1px 1px 0 #111;
+    cursor: pointer;
+  }
+  .settings-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border: 2px solid #111;
+    border-radius: 50%;
+    box-shadow: 1px 1px 0 #111;
+    cursor: pointer;
+  }
+
   /* 历史记录列表 */
   .history-list {
     max-height: 46vh;
@@ -315,11 +367,38 @@
     gap: 8px;
   }
   .history-item {
+    position: relative;
     border: 2px solid #111;
     border-radius: 14px 18px 12px 16px;
-    padding: 8px 10px;
+    padding: 8px 34px 8px 10px;
     box-shadow: 2px 2px 0 #111;
     background: #fff;
+  }
+  /* 单条删除按键：右上角小圆叉 */
+  .history-del {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border: 2px solid #111;
+    border-radius: 50%;
+    color: #111;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 1px 1px 0 #111;
+  }
+  .history-del:active {
+    transform: translate(1px, 1px);
+    box-shadow: none;
   }
   .history-expr {
     font-size: 12.5px;
@@ -338,6 +417,11 @@
     color: #9a9a9a;
     text-align: center;
     padding: 18px 0;
+  }
+  /* 清空按钮：与上方列表拉开距离 */
+  .history-clear {
+    margin-top: 12px;
+    text-align: center;
   }
 
   .site-footer {
@@ -365,7 +449,7 @@
   }
 
   .key {
-    background: #fff;
+    background: rgba(255, 255, 255, var(--key-alpha, 1));
     border: 2px solid #111;
     border-radius: 50%;
     aspect-ratio: 1 / 1;
@@ -380,15 +464,15 @@
     box-shadow: 1px 1px 0 #111;
   }
   .key.op {
-    background: #111;
+    background: rgba(17, 17, 17, var(--key-alpha, 1));
     color: #fff;
   }
   .key.clear {
-    background: #fff;
+    background: rgba(255, 255, 255, var(--key-alpha, 1));
     color: #111;
   }
   .key.eq {
-    background: #111;
+    background: rgba(17, 17, 17, var(--key-alpha, 1));
     color: #fff;
   }
   .key:nth-child(3n) { transform: rotate(0.7deg); }
@@ -482,6 +566,20 @@
     <p class="settings-hint">背景图片仅保存在本机浏览器，不会上传</p>
     <button class="settings-item" id="pickBg">背景图片</button>
     <button class="settings-item" id="resetBg">还原默认背景</button>
+    <div class="settings-field">
+      <div class="settings-field-head">
+        <span>按键透明度</span>
+        <span class="settings-field-val" id="keyAlphaVal">100%</span>
+      </div>
+      <input type="range" class="settings-range" id="keyAlpha" min="0" max="100" step="5" value="100" />
+    </div>
+    <div class="settings-field">
+      <div class="settings-field-head">
+        <span>输入框透明度</span>
+        <span class="settings-field-val" id="inputAlphaVal">100%</span>
+      </div>
+      <input type="range" class="settings-range" id="inputAlpha" min="0" max="100" step="5" value="100" />
+    </div>
   </div>
 </div>
 <input type="file" id="bgFile" accept="image/*" hidden />
@@ -494,6 +592,7 @@
     </div>
     <p class="settings-hint">最多保留 20 条，新的记录会顶掉最早的一条</p>
     <div class="history-list" id="historyList"></div>
+    <button class="settings-item history-clear" id="clearHistory">清空历史数据</button>
   </div>
 </div>
 
@@ -536,10 +635,37 @@
     return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // 输入框里的公式与结果保存在本机，关闭程序重新打开后自动恢复
+  const ROWS_KEY = "calc-rows";
+
+  function saveRows() {
+    try {
+      localStorage.setItem(ROWS_KEY, JSON.stringify(rows.map(r => ({ expr: r.expr, result: r.result }))));
+    } catch (e) {
+      // 存储失败时忽略，仅本次会话生效
+    }
+  }
+
+  function loadRows() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(ROWS_KEY) || "[]");
+      if (!Array.isArray(arr)) return [];
+      return arr.map(x => ({
+        id: rowIdCounter++,
+        expr: x && typeof x.expr === "string" ? x.expr : "",
+        result: x && x.result !== undefined && x.result !== null ? x.result : "",
+        cursor: 0
+      }));
+    } catch (e) {
+      return [];
+    }
+  }
+
   function addRow() {
     playTapSound();
     const id = rowIdCounter++;
     rows.push({ id, expr: "", result: "", cursor: 0 });
+    saveRows();
     renderRows();
     setActive(id);
   }
@@ -547,6 +673,7 @@
   function delRow(id) {
     playTapSound();
     rows = rows.filter(r => r.id !== id);
+    saveRows();
     if (activeRowId === id) {
       activeRowId = rows.length > 0 ? rows[rows.length - 1].id : null;
     }
@@ -580,7 +707,7 @@
         ${labelHtml}
         <div class="row-content-line">
           <input class="row-input" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${esc(r.expr)}" />
-          <span class="row-result">${r.result}</span>
+          <span class="row-result">${esc(r.result)}</span>
         </div>
       `;
 
@@ -634,6 +761,7 @@
     if (!r) return;
     r.expr = val;
     r.result = safeCalc(val);
+    saveRows();
     // 只更新结果，不整行重绘，避免输入框失焦、光标跳回末尾
     const span = document.querySelector("#row-card-" + id + " .row-result");
     if (span) span.textContent = r.result;
@@ -745,6 +873,7 @@
     const next = safeCalc(r.expr);
     if (next !== "" || !r.expr.trim()) r.result = next;
     r.cursor = pos;
+    saveRows();
 
     // 不重建输入框：直接更新同一个节点。
     // 节点存活时其光标位置始终是真实的（失焦不会改变光标），
@@ -773,6 +902,7 @@
       if (t.ok) out = t.value;
     }
     r.result = out;
+    saveRows();
     // 只有真正算出结果（非空、非错误）才计入历史
     if (out !== "" && out !== "错误") pushHistory(r.expr, out);
 
@@ -961,6 +1091,56 @@
     if (saved) applyBg(saved);
   })();
 
+  // ===== 按键 / 输入框透明度 =====
+  const KEY_ALPHA_KEY = "calc-key-alpha";
+  const INPUT_ALPHA_KEY = "calc-input-alpha";
+  const alphaSliders = {
+    key: document.getElementById("keyAlpha"),
+    input: document.getElementById("inputAlpha")
+  };
+  const alphaLabels = {
+    key: document.getElementById("keyAlphaVal"),
+    input: document.getElementById("inputAlphaVal")
+  };
+
+  // percent 为不透明度百分比：0 = 完全透明，100 = 完全不透明
+  function applyAlpha(kind, percent, persist) {
+    const p = Math.max(0, Math.min(100, Number(percent)));
+    document.body.style.setProperty(kind === "key" ? "--key-alpha" : "--input-alpha", String(p / 100));
+    if (alphaLabels[kind]) alphaLabels[kind].textContent = p + "%";
+    if (persist) {
+      try {
+        localStorage.setItem(kind === "key" ? KEY_ALPHA_KEY : INPUT_ALPHA_KEY, String(p));
+      } catch (e) {
+        // 存储失败时忽略，仅本次会话生效
+      }
+    }
+  }
+
+  Object.keys(alphaSliders).forEach(kind => {
+    const el = alphaSliders[kind];
+    if (!el) return;
+    el.addEventListener("input", () => applyAlpha(kind, el.value, true));
+  });
+
+  // 初始化：读取上次保存的透明度
+  (function initAlpha() {
+    try {
+      const k = localStorage.getItem(KEY_ALPHA_KEY);
+      const i = localStorage.getItem(INPUT_ALPHA_KEY);
+      if (k !== null) {
+        if (alphaSliders.key) alphaSliders.key.value = k;
+        applyAlpha("key", k, false);
+      }
+      if (i !== null) {
+        if (alphaSliders.input) alphaSliders.input.value = i;
+        applyAlpha("input", i, false);
+      }
+    } catch (e) {
+      // 读取失败时保持默认 100%
+    }
+  })();
+
   // ===== 历史记录 =====
   const HISTORY_KEY = "calc-history";
   const HISTORY_MAX = 20;
@@ -1002,7 +1182,7 @@
       list.appendChild(empty);
       return;
     }
-    history.forEach(h => {
+    history.forEach((h, i) => {
       const item = document.createElement("div");
       item.className = "history-item";
       const expr = document.createElement("div");
@@ -1011,8 +1191,15 @@
       const res = document.createElement("div");
       res.className = "history-result";
       res.textContent = h.result;
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "history-del";
+      del.title = "删除这条记录";
+      del.textContent = "×";
+      del.addEventListener("click", () => removeHistory(i));
       item.appendChild(expr);
       item.appendChild(res);
+      item.appendChild(del);
       list.appendChild(item);
     });
   }
@@ -1029,10 +1216,27 @@
     if (mask) mask.classList.remove("open");
   }
 
+  function clearHistory() {
+    history = [];
+    saveHistory();
+    renderHistory();
+  }
+
+  // 删除单条历史记录
+  function removeHistory(index) {
+    history.splice(index, 1);
+    saveHistory();
+    renderHistory();
+  }
+
   const historyMask = document.getElementById("historyMask");
   document.getElementById("historyClose").addEventListener("click", () => {
     playTapSound();
     closeHistory();
+  });
+  document.getElementById("clearHistory").addEventListener("click", () => {
+    playTapSound();
+    clearHistory();
   });
   historyMask.addEventListener("click", e => {
     if (e.target === historyMask) closeHistory();
@@ -1040,7 +1244,14 @@
 
   loadHistory();
 
-  addRow();
+  // 恢复上次的输入框内容；首次使用（本机没有记录）才新建一张空行
+  rows = loadRows();
+  if (rows.length > 0) {
+    activeRowId = rows[rows.length - 1].id;
+    renderRows();
+  } else {
+    addRow();
+  }
 </script>
 </body>
 </html>
