@@ -46,7 +46,7 @@
     transition: all .18s ease;
   }
   .row-card.single {
-    padding: 60px 18px;
+    padding: 52px 18px;
   }
   /* 只有一行时不需要删除按钮，同时收回为徽章预留的右侧空间 */
   .row-card.single .row-delete {
@@ -141,28 +141,57 @@
     text-align: right;
     transform: rotate(0.6deg);
     transition: font-size 0.18s;
+    white-space: nowrap;
+  }
+  @keyframes resultPop {
+    0% { transform: rotate(0.6deg) scale(1); }
+    50% { transform: rotate(0.6deg) scale(1.18); }
+    100% { transform: rotate(0.6deg) scale(1); }
+  }
+  .row-result.pop {
+    animation: resultPop .25s ease;
   }
 
   .add-row-btn {
     width: 100%;
-    background: transparent;
-    border: 1.5px dashed #ababab;
-    border-radius: 14px;
-    padding: 8px;
-    font-size: 13.5px;
-    color: #8a8a8a;
+    background: #fff;
+    border: 2px solid #111;
+    border-radius: 18px 22px 16px 24px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
     cursor: pointer;
     margin: 0 0 12px;
     font-family: inherit;
-    transition: background .15s ease, color .15s ease, border-color .15s ease;
+    box-shadow: 3px 3px 0 #111;
+    transform: rotate(-0.3deg);
+    transition: transform .1s ease, box-shadow .1s ease, background .15s ease;
   }
   .add-row-btn:hover {
-    background: #fff;
-    color: #111;
-    border-color: #111;
+    background: #fdfdf3;
+    transform: rotate(-0.3deg) scale(1.01);
   }
   .add-row-btn:active {
-    background: #f2f2f2;
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 #111;
+  }
+
+  .site-footer {
+    flex-shrink: 0;
+    margin-top: 8px;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: .5px;
+    color: #9a9a9a;
+    transform: rotate(-0.4deg);
+    user-select: none;
+  }
+  .site-footer span {
+    border-bottom: 1px dotted #c4c4c4;
+    padding-bottom: 1px;
   }
 
   .keypad {
@@ -202,6 +231,13 @@
   .key:nth-child(3n) { transform: rotate(0.7deg); }
   .key:nth-child(4n) { transform: rotate(-0.6deg); }
 
+  /* 矮屏（小屏手机 / 浏览器工具栏占位多）：收紧留白，保证键盘与底部版权行都在首屏内 */
+  @media (max-height: 700px) {
+    .row-card.single { padding: 38px 16px; }
+    .add-row-btn { padding: 10px; margin-bottom: 8px; }
+    .site-footer { margin-top: 6px; }
+  }
+
   /* PC常规屏：收窄宽度、缩小按键与间距 */
   @media (min-width: 640px) {
     body { max-width: 400px; }
@@ -230,8 +266,10 @@
     .keypad { gap: 6px; }
     .key { font-size: 14px; }
     .add-row-btn { font-size: 14px; margin-bottom: 6px; }
+    /* 为底部版权行腾出空间，避免矮窗口出现滚动 */
+    .site-footer { margin-top: 6px; font-size: 10px; }
     .row-card { margin-bottom: 6px; }
-    .row-card.single { padding: 38px 12px; }
+    .row-card.single { padding: 30px 12px; }
     .row-card.single .row-input,
     .row-card.single .row-result { font-size: 23px; }
   }
@@ -268,6 +306,8 @@
   <button class="key eq" onclick="calcCurrent()">=</button>
 </div>
 
+<footer class="site-footer"><span>© 2026 YunD云帝 计算器 v0.0.1</span></footer>
+
 <script>
   let rows = [];
   let activeRowId = null;
@@ -301,6 +341,10 @@
 
     // 手机震动
     if(navigator.vibrate) navigator.vibrate(15);
+  }
+
+  function esc(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function addRow() {
@@ -346,7 +390,7 @@
         <button class="row-delete" title="删除这一行">×</button>
         ${labelHtml}
         <div class="row-content-line">
-          <input class="row-input" value="${r.expr}" />
+          <input class="row-input" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${esc(r.expr)}" />
           <span class="row-result">${r.result}</span>
         </div>
       `;
@@ -363,6 +407,7 @@
       delBtn.addEventListener("click", () => delRow(r.id));
 
       wrap.appendChild(card);
+      fitRow(card);
     });
 
     // “添加一行”作为列表最后一张幽灵卡片，随内容一起滚动，不占用固定布局空间
@@ -382,6 +427,8 @@
     // 只更新结果，不整行重绘，避免输入框失焦、光标跳回末尾
     const span = document.querySelector("#row-card-" + id + " .row-result");
     if (span) span.textContent = r.result;
+    const card = document.getElementById("row-card-" + id);
+    if (card) fitRow(card);
   }
 
   function normalizeExpr(str) {
@@ -495,6 +542,7 @@
       if (resSpan) resSpan.textContent = r.result;
       oldInput.focus();
       oldInput.setSelectionRange(pos, pos);
+      fitRow(oldInput.closest(".row-card"));
     } else {
       renderRows();
     }
@@ -504,8 +552,76 @@
     playTapSound();
     if (activeRowId === null) return;
     const r = rows.find(x => x.id === activeRowId);
-    r.result = safeCalc(r.expr);
-    renderRows();
+    const s = normalizeExpr(r.expr);
+    let out = safeCalc(r.expr);
+    // 输入未完成（如 12+、3×(2+ ）时，按等于号自动补全并给出结果
+    if (out === "" && s.trim()) {
+      const t = tryEval(completeForCheck(s));
+      if (t.ok) out = t.value;
+    }
+    r.result = out;
+
+    // 只更新当前行结果，不重建输入框，保持焦点与光标
+    const card = document.getElementById("row-card-" + r.id);
+    if (card) {
+      const span = card.querySelector(".row-result");
+      if (span) {
+        span.textContent = r.result;
+        span.classList.remove("pop");
+        void span.offsetWidth; // 重启动画
+        span.classList.add("pop");
+      }
+      fitRow(card);
+    } else {
+      renderRows();
+    }
+  }
+
+  // 位数过多时按实际宽度精确缩小字号，保证公式和结果完整显示、不截断。
+  // 用 canvas 测量文字宽度：结果区最多占行宽 55%，输入框占剩余空间，各自等比缩小。
+  function fitRow(card) {
+    const line = card.querySelector(".row-content-line");
+    const input = card.querySelector(".row-input");
+    const result = card.querySelector(".row-result");
+    if (!line || !input) return;
+
+    const ctx = fitRow._ctx || (fitRow._ctx = document.createElement("canvas").getContext("2d"));
+    const measure = (el, text, size) => {
+      const cs = getComputedStyle(el);
+      ctx.font = cs.fontWeight + " " + size + "px " + cs.fontFamily;
+      return ctx.measureText(text || " ").width;
+    };
+    const baseOf = el => {
+      // 首次读取 CSS 断点定义的基准字号并缓存，后续在此基础上缩放
+      if (!el.dataset.base) el.dataset.base = parseFloat(getComputedStyle(el).fontSize);
+      return parseFloat(el.dataset.base);
+    };
+
+    // 行内可用总宽：内容行宽 - 右侧为删除徽章预留的 padding
+    const padRight = parseFloat(getComputedStyle(line).paddingRight) || 0;
+    const total = line.clientWidth - padRight;
+    const gap = 10;
+
+    // 结果区最多占 45%，先缩结果
+    let resultW = 0;
+    if (result) {
+      const base = baseOf(result);
+      const text = result.textContent;
+      const avail = total * 0.45;
+      let size = base;
+      const w = measure(result, text, base);
+      if (w > avail && w > 0) size = Math.max(9, Math.floor((base * avail / w) * 10) / 10);
+      result.style.fontSize = size + "px";
+      resultW = Math.min(measure(result, text, size), avail);
+    }
+
+    // 输入框占剩余空间（减去自身左右 padding 约 4px 与间隙），同样只缩不截断
+    const ibase = baseOf(input);
+    const iavail = Math.max(total - gap - resultW - 8, 60) * 0.97;
+    let isize = ibase;
+    const iw = measure(input, input.value, ibase);
+    if (iw > iavail && iw > 0) isize = Math.max(9, Math.floor((ibase * iavail / iw) * 10) / 10);
+    input.style.fontSize = isize + "px";
   }
 
   addRow();
