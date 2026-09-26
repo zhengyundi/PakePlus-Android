@@ -162,7 +162,7 @@
 
   .add-row-btn {
     flex: 1;
-    background: #fff;
+    background: rgba(255, 255, 255, var(--key-alpha, 1));
     border: 2px solid #111;
     border-radius: 18px 22px 16px 24px;
     padding: 12px;
@@ -176,7 +176,7 @@
     transition: transform .1s ease, box-shadow .1s ease, background .15s ease;
   }
   .add-row-btn:hover {
-    background: #fdfdf3;
+    background: rgba(253, 253, 243, var(--key-alpha, 1));
     transform: rotate(-0.3deg) scale(1.01);
   }
   .add-row-btn:active {
@@ -193,7 +193,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
+    background: rgba(255, 255, 255, var(--key-alpha, 1));
     border: 2px solid #111;
     border-radius: 50% 46% 52% 48%;
     color: #111;
@@ -203,7 +203,7 @@
     transition: transform .1s ease, box-shadow .1s ease, background .15s ease;
   }
   .gear-btn:hover,
-  .history-btn:hover { background: #fdfdf3; }
+  .history-btn:hover { background: rgba(253, 253, 243, var(--key-alpha, 1)); }
   .gear-btn:active,
   .history-btn:active {
     transform: translate(2px, 2px);
@@ -305,6 +305,16 @@
     transform: translate(1px, 1px);
     box-shadow: 1px 1px 0 #111;
   }
+
+  /* 面板底部版权信息：小字、灰色、居中，与手绘主题协调 */
+  .panel-foot {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    color: #8a8a8a;
+    line-height: 1.6;
+  }
+  .panel-foot p { margin: 0; }
 
   /* 透明度调节 */
   .settings-field {
@@ -453,27 +463,53 @@
     border: 2px solid #111;
     border-radius: 50%;
     aspect-ratio: 1 / 1;
-    font-size:18px;
+    font-size: 21px;
+    font-weight: 700;
+    /* 背景调透明后文字易被底纹干扰：加一圈白色光晕托底，保证深色文字始终清晰 */
+    text-shadow: 0 0 3px rgba(255,255,255,.95), 0 0 6px rgba(255,255,255,.8);
     cursor: pointer;
     font-family: inherit;
     box-shadow: 2px 2px 0 #111;
-    transition: transform .1s ease, box-shadow .1s ease;
+    transition: transform .1s ease, box-shadow .1s ease, background .12s ease;
   }
+  /* 按下时除位移外再加深背景，低透明度下按压反馈依然明显 */
   .key:active {
     transform: translate(1px, 1px);
     box-shadow: 1px 1px 0 #111;
+    background: rgba(214, 214, 214, var(--key-alpha, 1));
+  }
+  .key.op:active {
+    background: rgba(68, 68, 68, var(--key-alpha, 1));
+  }
+  .key.clear-all:active {
+    background: rgba(190, 62, 52, var(--key-alpha, 1));
+  }
+  .key.clear:active {
+    background: rgba(214, 137, 44, var(--key-alpha, 1));
+  }
+  .key.eq:active {
+    background: rgba(68, 68, 68, var(--key-alpha, 1));
   }
   .key.op {
     background: rgba(17, 17, 17, var(--key-alpha, 1));
     color: #fff;
+    /* 白色文字反过来加黑色光晕 */
+    text-shadow: 0 0 3px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.8);
+  }
+  /* C：红色警示（全部清除），退格：暖橙（逐位删除），与手绘主题协调 */
+  .key.clear-all {
+    background: rgba(228, 87, 74, var(--key-alpha, 1));
+    color: #fff;
+    text-shadow: 0 0 3px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.8);
   }
   .key.clear {
-    background: rgba(255, 255, 255, var(--key-alpha, 1));
+    background: rgba(243, 168, 73, var(--key-alpha, 1));
     color: #111;
   }
   .key.eq {
     background: rgba(17, 17, 17, var(--key-alpha, 1));
     color: #fff;
+    text-shadow: 0 0 3px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.8);
   }
   .key:nth-child(3n) { transform: rotate(0.7deg); }
   .key:nth-child(4n) { transform: rotate(-0.6deg); }
@@ -529,9 +565,9 @@
 <div id="rowsWrap"></div>
 
 <div class="keypad">
-  <button class="key clear" onclick="inputKey('C')">C</button>
-  <button class="key clear" onclick="inputKey('Backspace')">退格</button>
+  <button class="key clear-all" onclick="inputKey('C')">C</button>
   <button class="key op" onclick="inputKey('()')">( )</button>
+  <button class="key clear" onclick="inputKey('Backspace')">退格</button>
   <button class="key op" onclick="inputKey('÷')">÷</button>
 
   <button class="key" onclick="inputKey('7')">7</button>
@@ -549,13 +585,13 @@
   <button class="key" onclick="inputKey('3')">3</button>
   <button class="key op" onclick="inputKey('+')">+</button>
 
+  <button class="key" onclick="inputKey('%')">%</button>
   <button class="key" onclick="inputKey('0')">0</button>
   <button class="key" onclick="inputKey('.')">.</button>
-  <button class="key" onclick="inputKey('%')">%</button>
   <button class="key eq" onclick="calcCurrent()">=</button>
 </div>
 
-<footer class="site-footer"><span>© 2026 YunD云帝 计算器 v0.0.2</span></footer>
+<footer class="site-footer"><span>© 2026 YunD云帝 计算器 v1.0.2</span></footer>
 
 <div class="settings-mask" id="settingsMask">
   <div class="settings-panel">
@@ -580,6 +616,10 @@
       </div>
       <input type="range" class="settings-range" id="inputAlpha" min="0" max="100" step="5" value="100" />
     </div>
+    <div class="panel-foot">
+      <p>© 2026 YunD云帝 计算器 v1.0.2</p>
+      <p>开发者 云帝 15822152309</p>
+    </div>
   </div>
 </div>
 <input type="file" id="bgFile" accept="image/*" hidden />
@@ -593,6 +633,10 @@
     <p class="settings-hint">最多保留 20 条，新的记录会顶掉最早的一条</p>
     <div class="history-list" id="historyList"></div>
     <button class="settings-item history-clear" id="clearHistory">清空历史数据</button>
+    <div class="panel-foot">
+      <p>© 2026 YunD云帝 计算器 v1.0.2</p>
+      <p>开发者 云帝 15822152309</p>
+    </div>
   </div>
 </div>
 
@@ -601,6 +645,18 @@
   let activeRowId = null;
   let rowIdCounter = 0;
   let audioCtx = null;
+
+  // 移动端切到桌面/后台再返回时，输入框残留的焦点会唤起系统虚拟键盘。
+  // 页面一旦不可见就主动让输入框失焦；返回时也兜底再失焦一次。
+  function blurRowInput() {
+    const el = document.activeElement;
+    if (el && el.classList && el.classList.contains("row-input")) el.blur();
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") blurRowInput();
+  });
+  window.addEventListener("pagehide", blurRowInput);
+  window.addEventListener("pageshow", blurRowInput);
 
   // 光标位置以行数据为准（单一事实来源），不依赖重建后的输入框。
   // 用户移动光标/点按输入框/键盘输入时，实时同步到对应行。
@@ -616,16 +672,21 @@
 
   // 按键音效 + 震动
   function playTapSound() {
-    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // 移动端 AudioContext 常被挂起，不显式 resume 会导致按键音延迟甚至丢失
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const t = audioCtx.currentTime;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    osc.type = "sine";
-    osc.frequency.value = 600;
-    gain.gain.value = 0.08;
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.04);
+    osc.type = "triangle";
+    osc.frequency.value = 880;
+    // 用快速包络代替硬切断：起音更快、听感更脆，响应延迟感更低
+    gain.gain.setValueAtTime(0.09, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    osc.start(t);
+    osc.stop(t + 0.07);
 
     // 手机震动
     if(navigator.vibrate) navigator.vibrate(15);
@@ -775,6 +836,9 @@
       .replace(/÷/g, "/")
       .replace(/−/g, "-")
       .replace(/,/g, "")
+      // 加减语境下的百分数：100+10% -> 100+(100*10/100)，即 110
+      .replace(/(\d+\.?\d*)\s*([+-])\s*(\d+\.?\d*)%/g, "$1$2($1*$3/100)")
+      // 其余语境：10% -> (10/100)
       .replace(/(\d+\.?\d*)%/g, "($1/100)");
   }
 
@@ -859,8 +923,14 @@
         pos = selStart;
       }
     } else if (key === "()") {
-      // 在光标处插入成对括号，光标停在括号中间
-      r.expr = r.expr.slice(0, selStart) + "()" + r.expr.slice(selEnd);
+      // 智能括号：光标前有未闭合的「(」时只补一个「)」；否则插入成对「()」，光标停在中间
+      const before = r.expr.slice(0, selStart);
+      let open = 0;
+      for (const ch of before) {
+        if (ch === "(") open++;
+        else if (ch === ")") open = Math.max(0, open - 1);
+      }
+      r.expr = before + (open > 0 ? ")" : "()") + r.expr.slice(selEnd);
       pos = selStart + 1;
     } else {
       // 在光标处插入按键内容
