@@ -670,26 +670,63 @@
     if (r && typeof el.selectionStart === "number") r.cursor = el.selectionStart;
   });
 
-  // 按键音效 + 震动
-  function playTapSound() {
+  // 按键音效 + 震动：机械“咔哒”声（短噪声脉冲 + 低频体声），零音频资源、即时合成
+  // 机械按键音参数：不同按键轻微区分，全部是短促“咔哒”声
+  const CLICK_PRESETS = {
+    num:   { freq: 2600, q: 1.1, body: 220, vol: 0.16 },
+    op:    { freq: 1700, q: 1.0, body: 160, vol: 0.18 },
+    clear: { freq: 2100, q: 1.0, body: 140, vol: 0.18 },
+    back:  { freq: 2000, q: 1.0, body: 170, vol: 0.17 },
+    eq:    { freq: 2400, q: 1.0, body: 190, vol: 0.22 }
+  };
+  let clickNoiseBuffer = null;
+
+  function playTapSound(kind) {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     // 移动端 AudioContext 常被挂起，不显式 resume 会导致按键音延迟甚至丢失
     if (audioCtx.state === "suspended") audioCtx.resume();
     const t = audioCtx.currentTime;
+    const p = CLICK_PRESETS[kind] || CLICK_PRESETS.num;
+
+    // 白噪声 buffer 只建一次，每次按键新建 source（Web Audio 节点不可重复 start）
+    if (!clickNoiseBuffer) {
+      const len = Math.floor(audioCtx.sampleRate * 0.05);
+      clickNoiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const data = clickNoiseBuffer.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    }
+
+    // “咔”：短噪声脉冲经带通滤波，模拟机械键帽撞击
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = clickNoiseBuffer;
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = p.freq;
+    bp.Q.value = p.q;
+    const nGain = audioCtx.createGain();
+    nGain.gain.setValueAtTime(p.vol, t);
+    nGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    noise.connect(bp);
+    bp.connect(nGain);
+    nGain.connect(audioCtx.destination);
+    noise.start(t);
+    noise.stop(t + 0.04);
+
+    // “哒”：极低音量的低频体声，让点击不发飘
     const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = "triangle";
-    osc.frequency.value = 880;
-    // 用快速包络代替硬切断：起音更快、听感更脆，响应延迟感更低
-    gain.gain.setValueAtTime(0.09, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    const oGain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(p.body, t);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(60, p.body * 0.6), t + 0.05);
+    oGain.gain.setValueAtTime(p.vol * 0.5, t);
+    oGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    osc.connect(oGain);
+    oGain.connect(audioCtx.destination);
     osc.start(t);
     osc.stop(t + 0.07);
 
-    // 手机震动
-    if(navigator.vibrate) navigator.vibrate(15);
+    // 手机震动：12ms 短而干脆
+    if(navigator.vibrate) navigator.vibrate(12);
   }
 
   function esc(str) {
@@ -890,7 +927,12 @@
   }
 
   function inputKey(key) {
-    playTapSound();
+    // 按按键类型给不同音色：C 清除 / 退格 / 运算符 / 数字
+    const kind = key === "C" ? "clear"
+      : key === "Backspace" ? "back"
+      : ["×","÷","−","+","()","%"].includes(key) ? "op"
+      : "num";
+    playTapSound(kind);
     if (activeRowId === null) {
       addRow();
       return;
@@ -961,7 +1003,7 @@
   }
 
   function calcCurrent() {
-    playTapSound();
+    playTapSound("eq");
     if (activeRowId === null) return;
     const r = rows.find(x => x.id === activeRowId);
     const s = normalizeExpr(r.expr);
