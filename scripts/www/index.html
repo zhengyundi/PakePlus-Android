@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>手绘计算器</title>
 <link rel="icon" type="image/svg+xml" href="icon.svg" />
 
@@ -21,6 +21,8 @@
     color: #111;
     font-family: "Comic Sans MS", "Marker Felt", "Segoe UI", system-ui, sans-serif;
     padding: 16px;
+    /* 避开手机顶部刘海/状态栏安全区，输入框不会紧贴屏幕顶部 */
+    padding-top: calc(16px + env(safe-area-inset-top));
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
     max-width: 480px;
     margin: 0 auto;
