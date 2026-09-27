@@ -313,6 +313,56 @@
     box-shadow: 1px 1px 0 #111;
   }
 
+  /* 版本说明折叠区块：手绘边框，默认收起不占空间 */
+  .version-box {
+    margin-top: 14px;
+    border: 2px solid #111;
+    border-radius: 14px 18px 12px 16px;
+    background: #fff;
+    box-shadow: 2px 2px 0 #111;
+  }
+  .version-box summary {
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+  }
+  .version-box summary::-webkit-details-marker { display: none; }
+  .version-box summary::after {
+    content: "▸";
+    float: right;
+    transition: transform .15s ease;
+  }
+  .version-box[open] summary::after { transform: rotate(90deg); }
+  .version-list {
+    padding: 10px 12px 12px;
+    border-top: 2px dashed #bbb;
+    max-height: 32vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .version-item {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .version-tag {
+    flex: 0 0 auto;
+    font-weight: 700;
+    color: #fff;
+    background: #111;
+    padding: 1px 7px;
+    border-radius: 8px 10px 7px 9px;
+  }
+  .version-item.current .version-tag { background: #e0534b; }
+  .version-text { color: #444; }
+
   /* 面板底部版权信息：小字、灰色、居中，与手绘主题协调 */
   .panel-foot {
     margin-top: 14px;
@@ -623,6 +673,61 @@
       </div>
       <input type="range" class="settings-range" id="inputAlpha" min="0" max="100" step="5" value="100" />
     </div>
+
+    <details class="version-box">
+      <summary>版本说明（共 12 次升级）</summary>
+      <div class="version-list">
+        <div class="version-item current">
+          <span class="version-tag">v1.0.2</span>
+          <span class="version-text">删除行时画面保持不动，下方行自动上滚补位</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v1.0.1</span>
+          <span class="version-text">安卓避开状态栏间距；新增行自动上推停留，整页可手动翻阅</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v1.0.0</span>
+          <span class="version-text">机械“咔哒”音效与震动；面板版权与开发者信息；顶部安全区适配</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.9</span>
+          <span class="version-text">后台返回不再弹键盘；按键按压动画与变色；括号智能补全</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.8</span>
+          <span class="version-text">按键大字加粗与文字光晕；功能键透明度同步</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.7</span>
+          <span class="version-text">100+10%=110；按键音效；底排改为 % / 0 / .；按键换位与配色</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.6</span>
+          <span class="version-text">输入内容关闭重开后自动恢复</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.5</span>
+          <span class="version-text">按键与输入框透明度滑杆调节，本机保存</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.4</span>
+          <span class="version-text">历史记录键；保留 20 条新顶旧；支持清空与单条删除</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.3</span>
+          <span class="version-text">齿轮设置键；自定义背景图片、还原默认背景</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.2</span>
+          <span class="version-text">长数字、公式与结果完整显示不省略；底部版权信息</span>
+        </div>
+        <div class="version-item">
+          <span class="version-tag">v0.0.1</span>
+          <span class="version-text">屏蔽手机虚拟键盘；按“=”出结果；添加行手绘风；长数字自动缩字</span>
+        </div>
+      </div>
+    </details>
+
     <div class="panel-foot">
       <p>© 2026 YunD云帝 计算器 v1.0.2</p>
       <p>开发者 云帝 15822152309</p>
@@ -776,19 +881,41 @@
     playTapSound();
     const id = rowIdCounter++;
     rows.push({ id, expr: "", result: "", cursor: 0 });
+    // 先把新行设为活动行，再渲染：renderRows 末尾会自动把它滚入视野
+    setActive(id);
     saveRows();
     renderRows();
-    setActive(id);
   }
 
   function delRow(id) {
     playTapSound();
+    const index = rows.findIndex(r => r.id === id);
+    // 记住被删行删除前在屏幕上的纵向位置与整页滚动位置
+    const oldCard = document.getElementById("row-card-" + id);
+    const oldTop = oldCard ? oldCard.getBoundingClientRect().top : null;
+    const savedY = window.scrollY;
+
     rows = rows.filter(r => r.id !== id);
     saveRows();
     if (activeRowId === id) {
-      activeRowId = rows.length > 0 ? rows[rows.length - 1].id : null;
+      // 优先让同位置的下一行补位成为活动行，删的是最后一行则取上一行
+      activeRowId = rows[index] ? rows[index].id
+        : (rows[index - 1] ? rows[index - 1].id : null);
     }
-    renderRows();
+    // 先在原位重绘，不做“新行上推”
+    renderRows(false);
+    // 清空重建的瞬间页面会瞬时变矮、浏览器会把 scrollY 钳到 0，必须先恢复
+    window.scrollTo(0, savedY);
+
+    // 让补位行（原下一行）对齐到被删行的原位置：视觉上画面不动，下面的行自动滚上来。
+    // 删最后一行时下方没有行需要补位，恢复滚动位置即可，不再补偿
+    if (oldTop !== null && rows[index]) {
+      const fillCard = document.getElementById("row-card-" + rows[index].id);
+      if (fillCard) {
+        const dy = fillCard.getBoundingClientRect().top - oldTop;
+        if (dy) window.scrollBy(0, dy);
+      }
+    }
   }
 
   function setActive(id) {
@@ -800,7 +927,7 @@
     if (card) card.classList.add("active");
   }
 
-  function renderRows() {
+  function renderRows(scrollToActive = true) {
     const wrap = document.getElementById("rowsWrap");
     wrap.innerHTML = "";
     const count = rows.length;
@@ -865,6 +992,17 @@
     addLine.appendChild(historyBtn);
     addLine.appendChild(gearBtn);
     wrap.appendChild(addLine);
+
+    // 新增/删除行后自动上推：把活动行推到屏幕顶部偏下 12px 的固定位置停住，
+    // 新行完整可见、键盘紧随其下；页面没超出一屏时滚动量自然为 0，不会跳动。
+    // 用户随时可手动上下翻看前面的行和整页内容。
+    if (scrollToActive) {
+      const activeCard = document.getElementById("row-card-" + activeRowId);
+      if (activeCard) {
+        const target = activeCard.getBoundingClientRect().top + window.scrollY - 12;
+        window.scrollTo(0, Math.max(0, target));
+      }
+    }
   }
 
   function updateExpr(id, val) {
@@ -1373,7 +1511,9 @@
   rows = loadRows();
   if (rows.length > 0) {
     activeRowId = rows[rows.length - 1].id;
-    renderRows();
+    renderRows(false);
+    // 重新打开时从第一行开始看，不直接跳到最底部
+    window.scrollTo(0, 0);
   } else {
     addRow();
   }
