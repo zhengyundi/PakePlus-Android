@@ -31,6 +31,11 @@
     display: flex;
     flex-direction: column;
   }
+  /* Android（PakePlus 等壳）：沉浸式状态栏遮挡时 env() 返回 0，用 30px 固定兜底；
+     刘海机型取 env() 计算值，两者取大，不会双重叠加 */
+  html.is-android body {
+    padding-top: max(30px, calc(16px + env(safe-area-inset-top)));
+  }
 
   #rowsWrap {
     flex: 1;
@@ -643,6 +648,12 @@
 </div>
 
 <script>
+  // Android 设备（含 APK 壳 WebView）：env(safe-area-inset-top) 只反映刘海、
+  // 不反映普通状态栏，需在 <html> 上打标，由 CSS 给固定顶部间距兜底
+  if (/Android/i.test(navigator.userAgent)) {
+    document.documentElement.classList.add("is-android");
+  }
+
   let rows = [];
   let activeRowId = null;
   let rowIdCounter = 0;
