@@ -1019,15 +1019,44 @@
   }
 
   function normalizeExpr(str) {
-    return String(str)
+    let s = String(str)
       .replace(/×/g, "*")
       .replace(/÷/g, "/")
       .replace(/−/g, "-")
-      .replace(/,/g, "")
-      // 加减语境下的百分数：100+10% -> 100+(100*10/100)，即 110
-      .replace(/(\d+\.?\d*)\s*([+-])\s*(\d+\.?\d*)%/g, "$1$2($1*$3/100)")
-      // 其余语境：10% -> (10/100)
-      .replace(/(\d+\.?\d*)%/g, "($1/100)");
+      .replace(/,/g, "");
+    // 百分数处理：加减语境下 N% 表示「左侧完整表达式 × N/100」
+    let out = '';
+    let i = 0;
+    while (i < s.length) {
+      const m = s.slice(i).match(/^(\d+\.?\d*)\s*%/);
+      if (!m) { out += s[i]; i++; continue; }
+      const num = m[1];
+      i += m[0].length;
+      let j = out.length - 1;
+      while (j >= 0 && /\s/.test(out[j])) j--;
+      if (j >= 0 && (out[j] === '+' || out[j] === '-')) {
+        let depth = 0;
+        let k = j;
+        while (k > 0) {
+          const ch = out[k - 1];
+          if (ch === ')') { depth++; k--; }
+          else if (ch === '(') {
+            if (depth > 0) { depth--; k--; }
+            else break;
+          }
+          else k--;
+        }
+        const leftExpr = out.slice(k, j).trim();
+        if (leftExpr) {
+          out += '((' + leftExpr + ')*' + num + '/100)';
+        } else {
+          out += '(' + num + '/100)';
+        }
+      } else {
+        out += '(' + num + '/100)';
+      }
+    }
+    return out;
   }
 
   function tryEval(s) {
