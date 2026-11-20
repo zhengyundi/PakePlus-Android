@@ -1,0 +1,345 @@
+/* ========== 全局重置与基础样式 ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+  color: #333;
+  line-height: 1.6;
+}
+
+/* ========== 布局容器 ========== */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ========== 顶部导航 ========== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+  padding: 14px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.3s;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  letter-spacing: 1px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav a {
+  text-decoration: none;
+  color: #555;
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav a:hover {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.nav a.active {
+  color: #2563eb;
+  font-weight: 600;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* ========== 底部 ========== */
+.footer {
+  background: #fff;
+  border-top: 1px solid #eef2f7;
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ========== 按钮系统 ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+/* ========== A4 内容区（通用） ========== */
+.content-a4 {
+  flex: 1;
+  margin: 30px auto;
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  padding: 20mm 25mm;
+}
+
+/* ========== 表单组件 ========== */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: #fafbfc;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* ========== 区块标题 ========== */
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 14px;
+  padding-left: 10px;
+  border-left: 3px solid #2563eb;
+}
+
+/* ========== 卡片样式 ========== */
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 30px 24px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  text-decoration: none;
+  color: #222;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  border-color: rgba(37, 99, 235, 0.1);
+}
+
+.card h3 {
+  font-size: 17px;
+  margin-bottom: 8px;
+  color: #1e293b;
+}
+
+.card p {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ========== 提示/空状态 ========== */
+.empty-state {
+  text-align: center;
+  color: #94a3b8;
+  padding: 50px 20px;
+  font-size: 15px;
+}
+
+/* ========== 加载动画 ========== */
+.btn-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-left: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========== 打印通用样式 ========== */
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  .header,
+  .footer,
+  .no-print {
+    display: none !important;
+  }
+
+  .content-a4 {
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 20mm 25.4mm;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+}
+
+/* ========== 响应式适配 ========== */
+@media (max-width: 900px) {
+  .content-a4 {
+    width: 100%;
+    margin: 15px;
+    padding: 20px;
+    min-height: auto;
+    border-radius: 12px;
+  }
+
+  .header {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .nav {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .nav a {
+    font-size: 13px;
+    padding: 5px 10px;
+  }
+}
