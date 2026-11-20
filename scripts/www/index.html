@@ -1149,10 +1149,10 @@
           <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
         </svg>
       </div>
-      <div class="dz-main">点击选择文件，或将文件拖拽到此处</div>
-      <div class="dz-sub">支持 .xlsx / .xls / .csv，可一次选择多个文件；发票文件与银行明细自动识别</div>
+      <div class="dz-main">点击选择文件，支持多选或导入 zip 压缩包</div>
+      <div class="dz-sub">支持 .xlsx / .xls / .csv；多个文件可打包成 .zip 一次导入，自动解压；发票与银行明细自动识别</div>
     </div>
-    <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFiles(event)">
+    <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.csv,.zip" style="display:none" onchange="handleFiles(event)">
 
     <div class="file-head" id="fileHead" style="display:none;">
       <span class="file-head-title">已上传文件<span class="file-count" id="fileCount">0</span></span>
@@ -1241,6 +1241,7 @@
 </div>
 
 <script src="xlsx.full.min.js"></script>
+<script src="jszip.min.js"></script>
 <script src="common.js"></script>
 <script>
 // 独立单页，不渲染顶部导航
@@ -1375,17 +1376,36 @@ function handleDrop(e) {
 }
 
 function addFiles(files) {
-  setStatus('loading', '<span class="spinner"></span>正在解析 ' + files.length + ' 个文件…');
+  setStatus('loading', '<span class="spinner"></span>正在处理 ' + files.length + ' 个文件…');
+  var queue = files.slice();
   var chain = Promise.resolve();
+
+  // 压缩包先解压，再统一解析其中的 Excel / CSV
   files.forEach(function(file) {
+    if (!/\.zip$/i.test(file.name)) return;
     chain = chain.then(function() {
-      return readRecord(file).then(function(rec) {
-        fileRecords.push(rec);
-        renderFileList();
+      setStatus('loading', '<span class="spinner"></span>正在解压 ' + escapeHTML(file.name) + '…');
+      return unzipExcel(file).then(function(inner) {
+        if (!inner.length) throw new Error('压缩包内没有 Excel / CSV 文件：' + file.name);
+        queue = queue.filter(function(f) { return f !== file; }).concat(inner);
       });
     });
   });
+
   chain.then(function() {
+    if (!queue.length) throw new Error('未找到可解析的 Excel / CSV 文件');
+    setStatus('loading', '<span class="spinner"></span>正在解析 ' + queue.length + ' 个文件…');
+    var seq = Promise.resolve();
+    queue.forEach(function(file) {
+      seq = seq.then(function() {
+        return readRecord(file).then(function(rec) {
+          fileRecords.push(rec);
+          renderFileList();
+        });
+      });
+    });
+    return seq;
+  }).then(function() {
     var fail = fileRecords.filter(function(r) { return r.error; }).length;
     var hasInv = fileRecords.some(function(r) { return r.kind === 'invoice'; });
     var hasBank = fileRecords.some(function(r) { return r.kind === 'bank'; });
@@ -1405,6 +1425,26 @@ function addFiles(files) {
     }
   }).catch(function(err) {
     setStatus('error', '解析失败：' + (err && err.message ? err.message : err));
+  });
+}
+
+// 解压 zip，返回其中的 Excel / CSV 文件
+function unzipExcel(file) {
+  if (typeof JSZip === 'undefined') return Promise.reject(new Error('解压组件未加载，请刷新页面后重试'));
+  return JSZip.loadAsync(file).then(function(zip) {
+    var names = [];
+    zip.forEach(function(path, entry) {
+      if (entry.dir) return;
+      if (path.indexOf('__MACOSX/') !== -1) return;
+      var base = path.split('/').pop();
+      if (!base || base.charAt(0) === '.') return;
+      if (/\.(xlsx|xls|csv)$/i.test(base)) names.push(path);
+    });
+    return Promise.all(names.map(function(path) {
+      return zip.file(path).async('blob').then(function(blob) {
+        return new File([blob], path.split('/').pop(), { type: blob.type || 'application/octet-stream' });
+      });
+    }));
   });
 }
 
