@@ -1217,7 +1217,7 @@
 
     <div class="actions">
       <button class="btn btn-primary" id="buildBtn" onclick="buildReport()">生成核对报告</button>
-      <button class="btn btn-outline" onclick="printReport()">打印报告</button>
+      <button class="btn btn-outline" id="printBtn" onclick="printReport()">打印报告</button>
       <details class="print-panel no-print" id="printPanel">
         <summary>选择打印部分</summary>
         <div class="print-panel-body">
@@ -1242,6 +1242,8 @@
 
 <script src="xlsx.full.min.js"></script>
 <script src="jszip.min.js"></script>
+<script src="html2canvas.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
 <script src="common.js"></script>
 <script>
 // 独立单页，不渲染顶部导航
@@ -3536,16 +3538,157 @@ window.addEventListener('beforeprint', function() {
   }
 });
 
+// 是否运行在 App / WebView 内（此类环境不支持 window.print）
+function isEmbeddedApp() {
+  return /; wv\)|PakePlus|Tauri/i.test(navigator.userAgent || '') || !!window.__TAURI_INTERNALS__ || !!window.__TAURI__;
+}
+
+function pdfFileName() {
+  if (reportView === 'unmatched') return '无对应发票资金往来报告';
+  if (reportView === 'unmatchedCompany') return unmatchedCompanyName + '无对应发票资金往来报告';
+  return model.filters && model.filters.company
+    ? model.filters.company + '收付款核对报告'
+    : '收付款情况核对报告';
+}
+
 function printReport() {
   if (!model) { showToast('请先生成核对报告', 'error'); return; }
   applyPrintSelections();
-  var name;
-  if (reportView === 'unmatched') name = '无对应发票资金往来报告';
-  else if (reportView === 'unmatchedCompany') name = unmatchedCompanyName + '无对应发票资金往来报告';
-  else name = model.filters && model.filters.company
-    ? model.filters.company + '收付款核对报告'
-    : '收付款情况核对报告';
-  printWithTitle(name);
+  // App 内 WebView 没有打印支持，改为直接生成 PDF
+  if (isEmbeddedApp()) { exportPDF(); return; }
+  printWithTitle(pdfFileName());
+}
+
+// 在页面内生成 PDF（不依赖系统打印），供 App / 手机端保存
+function exportPDF() {
+  var name = pdfFileName();
+  if (typeof html2canvas === 'undefined' || !(window.jspdf && window.jspdf.jsPDF)) {
+    showToast('PDF 组件未加载，请确认 html2canvas.min.js 与 jspdf.umd.min.js 已一并部署', 'error');
+    return;
+  }
+  var btn = document.getElementById('printBtn');
+  var oldText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '正在生成 PDF…'; }
+  setStatus('loading', '<span class="spinner"></span>正在生成 PDF，内容较多时请稍候…');
+  setTimeout(function() {
+    buildPDF(name, function(ok, msg) {
+      if (btn) { btn.disabled = false; btn.textContent = oldText; }
+      if (!ok) { setStatus('error', '生成 PDF 失败：' + msg); showToast('生成 PDF 失败', 'error'); }
+    });
+  }, 60);
+}
+
+function buildPDF(name, done) {
+  var src = document.getElementById('report');
+  if (!src) { done(false, '报告尚未生成'); return; }
+
+  // 离屏容器固定 900px 宽，避免手机窄屏把表格压得过窄
+  var holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-12000px;top:0;width:900px;background:#fff;z-index:-1;';
+  var clone = src.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.style.display = 'block';
+  clone.style.width = '900px';
+  clone.style.margin = '0';
+  clone.style.boxShadow = 'none';
+  clone.style.borderRadius = '0';
+  var folded = clone.querySelectorAll('.is-folded');
+  for (var i = 0; i < folded.length; i++) folded[i].classList.remove('is-folded');
+  var np = clone.querySelectorAll('.no-print');
+  for (var j = np.length - 1; j >= 0; j--) np[j].parentNode.removeChild(np[j]);
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
+
+  var blocks = [];
+  for (var k = 0; k < clone.children.length; k++) {
+    if (clone.children[k].offsetHeight > 4) blocks.push(clone.children[k]);
+  }
+  if (!blocks.length) {
+    document.body.removeChild(holder);
+    done(false, '没有可导出的报告内容');
+    return;
+  }
+
+  var jsPDF = window.jspdf.jsPDF;
+  var pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait', compress: true });
+  var pageW = pdf.internal.pageSize.getWidth();
+  var pageH = pdf.internal.pageSize.getHeight();
+  var margin = 22;
+  var contentW = pageW - margin * 2;
+  var contentH = pageH - margin * 2;
+  var firstPage = true;
+
+  var chain = Promise.resolve();
+  blocks.forEach(function(el) {
+    chain = chain.then(function() {
+      var h = el.offsetHeight;
+      // 控制画布高度，避免长表格超出手机浏览器画布上限
+      var scale = Math.min(2, 12000 / Math.max(h, 1));
+      if (scale < 0.35) scale = 0.35;
+      return html2canvas(el, { scale: scale, backgroundColor: '#ffffff', logging: false }).then(function(canvas) {
+        var pxPerPt = canvas.width / contentW;
+        var pageSlice = Math.floor(contentH * pxPerPt);
+        var y = 0, guard = 0;
+        while (y < canvas.height && guard < 120) {
+          guard++;
+          var sliceH = Math.min(pageSlice, canvas.height - y);
+          if (!firstPage) pdf.addPage();
+          firstPage = false;
+          var tmp = document.createElement('canvas');
+          tmp.width = canvas.width;
+          tmp.height = sliceH;
+          tmp.getContext('2d').drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          pdf.addImage(tmp.toDataURL('image/jpeg', 0.9), 'JPEG', margin, margin, contentW, sliceH / pxPerPt, undefined, 'FAST');
+          y += sliceH;
+        }
+      });
+    });
+  });
+
+  chain.then(function() {
+    var blob = pdf.output('blob');
+    if (holder.parentNode) holder.parentNode.removeChild(holder);
+    deliverPDF(blob, name);
+    done(true);
+  }).catch(function(err) {
+    if (holder.parentNode) holder.parentNode.removeChild(holder);
+    done(false, (err && err.message) ? err.message : String(err));
+  });
+}
+
+// 保存 PDF：优先系统分享（可存到文件/发送），否则走浏览器下载
+function deliverPDF(blob, name) {
+  var file = null;
+  try { file = new File([blob], name + '.pdf', { type: 'application/pdf' }); } catch (e) {}
+  if (file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: name }).then(function() {
+      setStatus('success', '✓ PDF 已生成并分享');
+    }).catch(function() {
+      downloadBlob(blob, name);
+    });
+    return;
+  }
+  downloadBlob(blob, name);
+}
+
+function downloadBlob(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = name + '.pdf';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 30000);
+  setStatus('success', '✓ PDF 已生成：' + name + '.pdf（' + Math.round(blob.size / 1024) + ' KB）' +
+    (isEmbeddedApp() ? '，如未自动保存，请到系统「文件 / 下载」目录查看' : ''));
+  showToast('PDF 已生成', 'success');
+}
+
+// App 内把按钮文案改为“导出 PDF”
+if (isEmbeddedApp()) {
+  var printBtnEl = document.getElementById('printBtn');
+  if (printBtnEl) printBtnEl.textContent = '导出 PDF';
 }
 </script>
 </body>
