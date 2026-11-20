@@ -1,0 +1,3512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>收付款分析 - 账目核对系统</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  :root {
+    --ink: #0f172a;
+    --text: #334155;
+    --muted: #64748b;
+    --faint: #94a3b8;
+    --line: #e6ebf2;
+    --line-soft: #eef2f7;
+    --brand: #2563eb;
+    --brand-dark: #1d4ed8;
+    --surface: #ffffff;
+    --radius-lg: 18px;
+    --radius: 12px;
+    --radius-sm: 9px;
+    --shadow-card: 0 1px 2px rgba(15, 23, 42, .04), 0 14px 36px -16px rgba(15, 23, 42, .16);
+    --shadow-soft: 0 1px 2px rgba(15, 23, 42, .04), 0 4px 12px -6px rgba(15, 23, 42, .10);
+  }
+
+  body {
+    background:
+      radial-gradient(1000px 480px at 50% -160px, #e8f1ff 0%, rgba(232, 241, 255, 0) 72%),
+      #f4f7fb;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-card {
+    width: min(1000px, calc(100% - 40px));
+    margin: 32px auto;
+    background: var(--surface);
+    border: 1px solid rgba(15, 23, 42, .05);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 30px 34px 32px;
+  }
+
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .brand-mark {
+    flex: none;
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+    box-shadow: 0 8px 18px -8px rgba(37, 99, 235, .6);
+    color: #fff;
+  }
+
+  .brand-mark svg { width: 23px; height: 23px; }
+
+  .page-head-text { flex: 1; min-width: 0; }
+
+  .page-title {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    color: var(--ink);
+    line-height: 1.35;
+  }
+
+  .page-sub {
+    margin-top: 3px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.6;
+    text-align: left;
+  }
+
+  .head-badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    color: var(--brand-dark);
+    font-size: 11.5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .head-badge i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: block;
+  }
+
+  .dropzone {
+    margin-top: 20px;
+    border: 1.5px dashed #cdd7e3;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, #fbfdff, #f6f9fd);
+    padding: 32px 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  }
+
+  .dropzone:hover,
+  .dropzone.drag {
+    border-color: var(--brand);
+    background: #f3f8ff;
+    box-shadow: inset 0 0 0 3px rgba(37, 99, 235, .06);
+  }
+
+  .dz-icon {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 12px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    border: 1px solid #dbeafe;
+    box-shadow: 0 6px 16px -8px rgba(37, 99, 235, .45);
+    color: var(--brand);
+  }
+
+  .dz-icon svg { width: 22px; height: 22px; }
+
+  .dz-main { font-size: 14.5px; color: var(--ink); font-weight: 600; }
+  .dz-sub { font-size: 12.5px; color: var(--faint); margin-top: 6px; }
+
+  .file-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    background: #fff;
+    font-size: 12.5px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+
+  .file-row:hover { border-color: #dbe3ee; box-shadow: var(--shadow-soft); }
+
+  .file-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 0 2px 10px;
+  }
+
+  .file-head-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .file-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: var(--brand-dark);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .file-type {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .file-type.invoice { background: #eff6ff; color: #1d4ed8; }
+  .file-type.bank { background: #ecfdf5; color: #047857; }
+  .file-type.unknown { background: #fef2f2; color: #dc2626; }
+
+  .file-name {
+    flex: 1;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-meta { flex: none; color: #64748b; font-size: 12px; }
+
+  .file-mirror {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    color: #475569;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .file-mirror input { margin: 0; cursor: pointer; }
+  .file-mirror.on { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
+
+  .file-del {
+    flex: none;
+    border: 0;
+    background: none;
+    color: #dc2626;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-family: inherit;
+  }
+
+  .file-del:hover { text-decoration: underline; }
+
+  .status-bar {
+    display: none;
+    margin-top: 14px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+
+  .status-bar.show { display: block; }
+  .status-bar.loading { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .status-bar.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .status-bar.warn { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+  .status-bar.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+  .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #bfdbfe;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    vertical-align: -2px;
+    margin-right: 6px;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .actions .btn { min-height: 42px; }
+
+  .btn-outline {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid #dbe3ee;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    border-color: #bcd0ee;
+    color: var(--brand-dark);
+    background: #f8fbff;
+  }
+
+  .btn-outline.btn-danger-text { color: #b91c1c; border-color: #f0d6d6; }
+
+  .btn-outline.btn-danger-text:hover:not(:disabled) {
+    color: #b91c1c;
+    border-color: #e9bcbc;
+    background: #fef6f6;
+  }
+
+  .print-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .print-opt input {
+    width: 14px;
+    height: 14px;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+
+  /* 打印内容选择面板 */
+  .print-panel {
+    position: relative;
+    font-size: 12.5px;
+    color: #475569;
+  }
+
+  .print-panel > summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid #dbe3ee;
+    border-radius: var(--radius-sm);
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    transition: border-color .2s ease, color .2s ease;
+  }
+
+  .print-panel > summary::-webkit-details-marker { display: none; }
+  .print-panel > summary::before { content: '▸ '; color: #2563eb; }
+  .print-panel[open] > summary::before { content: '▾ '; }
+  .print-panel > summary:hover { border-color: #2563eb; }
+
+  .print-panel-body {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    min-width: 250px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    padding: 10px 12px;
+    display: grid;
+    gap: 7px;
+  }
+
+  .print-panel-body .print-opt { display: flex; }
+  .print-panel-tip { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+
+  /* 筛选栏 */
+  .filter-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 18px;
+    padding: 16px 18px 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .filter-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+
+  .filter-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .filter-title::before {
+    content: "";
+    width: 3px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--brand);
+  }
+
+  .filter-reset {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border: 1px solid #dbe3ee;
+    border-radius: 7px;
+    background: #fff;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color .18s ease, border-color .18s ease, background .18s ease;
+  }
+
+  .filter-reset:hover {
+    color: var(--brand-dark);
+    border-color: #bcd0ee;
+    background: #f8fbff;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px 16px;
+  }
+
+  .filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .filter-item.span-2 { grid-column: span 2; }
+  .filter-item.span-all { grid-column: 1 / -1; }
+
+  .filter-item label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: .2px;
+    white-space: nowrap;
+  }
+
+  .filter-item select,
+  .filter-item input[type="text"],
+  .filter-item input[type="date"],
+  .ms-trigger {
+    height: 36px;
+    width: 100%;
+    max-width: none;
+    padding: 0 10px;
+    border: 1px solid #dfe6ef;
+    border-radius: 9px;
+    background: #fff;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .filter-item select:focus,
+  .filter-item input[type="text"]:focus,
+  .filter-item input[type="date"]:focus,
+  .ms-trigger:focus-visible {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+  }
+
+  .filter-item select:hover,
+  .filter-item input[type="text"]:hover,
+  .filter-item input[type="date"]:hover,
+  .ms-trigger:hover {
+    border-color: #c6d4e6;
+  }
+
+  .date-pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .date-pair input[type="date"] {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .filter-item .date-sep {
+    flex: none;
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  /* 年份多选下拉 */
+  .multi-select { position: relative; }
+
+  .ms-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ms-trigger::after {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid #94a3b8;
+    border-bottom: 1.5px solid #94a3b8;
+    transform: translateY(-2px) rotate(45deg);
+  }
+
+  .ms-trigger.active { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  .ms-trigger.chosen { color: var(--brand-dark); font-weight: 500; }
+
+  .ms-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 50;
+    min-width: 100%;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 14px 32px -14px rgba(15, 23, 42, .28);
+    padding: 6px;
+  }
+
+  .ms-panel.show { display: block; }
+
+  .ms-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .ms-item:hover { background: #f1f5f9; }
+  .ms-item input { width: 14px; height: 14px; accent-color: #2563eb; cursor: pointer; }
+
+  .ms-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 6px 8px 2px;
+    margin-top: 4px;
+    border-top: 1px solid #eef2f7;
+  }
+
+  .ms-link {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 12px;
+    font-family: inherit;
+    color: #2563eb;
+    cursor: pointer;
+  }
+
+  .ms-link:hover { text-decoration: underline; }
+
+  .btn-sm {
+    padding: 6px 12px !important;
+    font-size: 12.5px !important;
+    height: auto !important;
+  }
+
+  .filter-tip {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line-soft);
+    font-size: 11.5px;
+    color: var(--faint);
+    line-height: 1.75;
+  }
+
+  /* 折叠 */
+  .filter-head-actions { display: flex; align-items: center; gap: 8px; }
+
+  .chev {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-1px) rotate(45deg);
+    transition: transform .2s ease;
+  }
+
+  .collapsed .chev { transform: translateY(1px) rotate(-135deg); }
+
+  .filter-bar.collapsed .filter-grid,
+  .filter-bar.collapsed .filter-tip { display: none; }
+
+  .filter-bar.collapsed .filter-head {
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: 0;
+  }
+
+  /* ===== 报告 ===== */
+  .report {
+    width: min(1120px, calc(100% - 40px));
+    margin: 0 auto 44px;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, .05);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 32px 38px 38px;
+  }
+
+  .report-head { text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 16px; }
+
+  .report-head h1 { font-size: 22px; color: var(--ink); letter-spacing: 2px; font-weight: 700; }
+
+  .report-meta {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+
+  .report-meta b { color: #334155; font-weight: 600; }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0 6px;
+  }
+
+  .kpi-grid.single { grid-template-columns: 1fr; }
+
+  .link-btn {
+    border: 0;
+    background: none;
+    padding: 0;
+    margin-top: 3px;
+    font-size: 11.5px;
+    font-family: inherit;
+    color: #2563eb;
+    cursor: pointer;
+  }
+
+  .link-btn:hover { text-decoration: underline; }
+
+  table.rpt tbody tr.current-row { background: #f0f7ff; }
+
+  .report-back { text-align: right; margin-bottom: 6px; }
+
+  .report-back .link-btn { font-size: 12.5px; }
+
+  .acct {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 11.5px;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  .kpi-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    background: #fff;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .kpi-card.recv { border-top: 3px solid var(--brand); }
+  .kpi-card.pay { border-top: 3px solid #f59e0b; }
+
+  .kpi-title { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .kpi-main {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 6px 0 10px;
+    letter-spacing: -.3px;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-main small { font-size: 12px; font-weight: 400; color: #94a3b8; margin-right: 4px; }
+
+  .kpi-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: #64748b;
+    padding: 3px 0;
+  }
+
+  .kpi-row b { color: #1e293b; font-weight: 600; }
+  .kpi-row b.green { color: #15803d; }
+  .kpi-row b.red { color: #dc2626; }
+
+  .bar {
+    height: 7px;
+    border-radius: 4px;
+    background: #eef2f7;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+
+  .bar i { display: block; height: 100%; border-radius: 4px; }
+  .recv .bar i { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+  .pay .bar i { background: linear-gradient(90deg, #fbbf24, #d97706); }
+
+  .kpi-foot { font-size: 11.5px; color: #94a3b8; margin-top: 8px; }
+
+  .section { margin-top: 26px; }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    padding-left: 9px;
+    border-left: 4px solid #2563eb;
+    margin-bottom: 10px;
+  }
+
+  .section-title.pay { border-left-color: #f59e0b; }
+
+  .section-title .sub { font-size: 12px; font-weight: 400; color: #94a3b8; }
+
+  /* 报告板块折叠 */
+  .section-title.fold-head,
+  .section-title.fold-title {
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 2px 4px 9px;
+    transition: color .18s ease;
+  }
+
+  .fold-title { margin-top: 20px; }
+
+  .section-title.fold-head:hover,
+  .section-title.fold-title:hover { color: #1d4ed8; }
+
+  .section-title.fold-head::after,
+  .section-title.fold-title::after {
+    content: "";
+    flex: none;
+    margin-left: auto;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid #94a3b8;
+    border-bottom: 1.5px solid #94a3b8;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform .2s ease, border-color .2s ease;
+  }
+
+  .section-title.fold-head:hover::after,
+  .section-title.fold-title:hover::after,
+  .section-title.is-folded::after { border-color: #1d4ed8; }
+
+  .section-title.is-folded::after { transform: translateY(1px) rotate(-135deg); }
+
+  .section.is-folded > *:not(.section-title) { display: none; }
+
+  .kpi-grid.is-folded { display: none; }
+
+  .fold-title + .kpi-grid { margin-top: 0; }
+
+  /* 无票资金往来汇总条 */
+  .um-summary {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    background: #f8fafc;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    break-inside: avoid;
+  }
+
+  .um-sum-item {
+    flex: 1 1 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 20px;
+  }
+
+  .um-sum-item:first-child { padding-left: 0; }
+
+  .um-sum-label { font-size: 12.5px; color: #64748b; }
+
+  .um-sum-value {
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.2px;
+    color: #1e293b;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .um-sum-value.in, .um-sum-value.net-pos { color: #15803d; }
+  .um-sum-value.out, .um-sum-value.net-neg { color: #dc2626; }
+
+  .um-sum-sub { font-size: 12px; color: #94a3b8; }
+
+  .um-sum-divider { width: 1px; align-self: stretch; background: #e2e8f0; }
+
+  .um-sum-note {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-left: auto;
+    padding-left: 20px;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  table.rpt {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  table.rpt th,
+  table.rpt td {
+    border: 1px solid #edf1f6;
+    padding: 8px 10px;
+    text-align: center;
+    color: #334155;
+    vertical-align: middle;
+  }
+
+  table.rpt th {
+    background: #f7f9fc;
+    color: #475569;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  table.rpt td.left { text-align: left; }
+  table.rpt td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.rpt tbody tr:nth-child(even) { background: #fcfdff; }
+  table.rpt tbody tr:hover { background: #f2f7ff; }
+  table.rpt tfoot td { background: #f8fafc; font-weight: 600; }
+
+  .tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .tag.done { background: #ecfdf5; color: #047857; }
+  .tag.partial { background: #fffbeb; color: #b45309; }
+  .tag.open { background: #fef2f2; color: #b91c1c; }
+  .tag.red { background: #f1f5f9; color: #64748b; }
+  .tag.personal { background: #f0fdfa; color: #0f766e; }
+
+  .detail-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    color: #64748b;
+  }
+
+  .detail-tools select {
+    padding: 4px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #333;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .match-list {
+    max-width: 260px;
+    margin: 0 auto;
+    color: #64748b;
+    font-size: 11.5px;
+    text-align: left;
+    line-height: 1.6;
+    word-break: break-all;
+  }
+
+  .muted { color: #94a3b8; }
+
+  .notes {
+    margin-top: 26px;
+    padding: 16px 18px;
+    background: #fbfcfe;
+    border: 1px solid var(--line-soft);
+    border-left: 3px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+
+  .notes b { color: #475569; font-size: 13.5px; }
+
+  .empty-report {
+    padding: 60px 0;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13.5px;
+  }
+
+  @media print {
+    @page {
+      size: A4;
+      margin: 12mm 12mm 16mm;
+
+      @bottom-center {
+        content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        font-size: 9pt;
+        color: #475569;
+      }
+    }
+
+    .header, .footer, .no-print { display: none !important; }
+
+    .report {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    .report-head h1 { font-size: 19px; }
+    .kpi-grid { gap: 10px; }
+    .kpi-card { padding: 10px 12px; break-inside: avoid; border-color: #64748b; }
+    .kpi-main { font-size: 18px; }
+    .section { margin-top: 16px; }
+    table.rpt { font-size: 10px; }
+    table.rpt th, table.rpt td { padding: 4px 5px; }
+    table.rpt tr { page-break-inside: avoid; }
+    .table-wrap { overflow: visible; }
+    .detail-tools { display: none !important; }
+    .section { break-inside: auto; }
+    .notes {
+      margin-top: 14px;
+      padding: 9px 11px;
+      font-size: 9.8px;
+      line-height: 1.65;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .notes b { font-size: 10.5px; }
+  }
+
+  .footer {
+    background: transparent;
+    border-top: 0;
+    padding: 4px 20px 28px;
+    color: #a3aec0;
+    font-size: 12px;
+  }
+
+  /* ===== 平板 ===== */
+  @media (max-width: 900px) {
+    .page-card {
+      width: calc(100% - 28px);
+      margin: 22px auto;
+      padding: 24px 22px;
+    }
+    .report {
+      width: calc(100% - 28px);
+      margin-bottom: 28px;
+      padding: 24px 20px 28px;
+    }
+    .kpi-grid { grid-template-columns: 1fr; }
+    .kpi-main { font-size: 22px; }
+    .report-head h1 { font-size: 19px; }
+  }
+
+  /* 窄屏报告表格：保持完整列宽，改为卡片内左右滑动 */
+  @media screen and (max-width: 900px) {
+    .table-wrap table { min-width: 760px; }
+    .table-wrap table.rpt th,
+    .table-wrap table.rpt td { white-space: nowrap; }
+    .table-wrap table.rpt td:first-child {
+      white-space: normal;
+      min-width: 150px;
+      text-align: left;
+    }
+    .table-wrap::-webkit-scrollbar { height: 7px; }
+    .table-wrap::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .detail-tools { flex-wrap: wrap; justify-content: flex-start; }
+  }
+
+  .scroll-hint { display: none; }
+
+  @media screen and (max-width: 900px) {
+    .scroll-hint {
+      display: block;
+      margin: 6px 2px 2px;
+      font-size: 11px;
+      color: var(--faint);
+      text-align: right;
+      letter-spacing: .2px;
+    }
+  }
+
+  /* ===== 手机 ===== */
+  @media (max-width: 640px) {
+    .page-card,
+    .report {
+      width: calc(100% - 20px);
+      margin: 12px auto 18px;
+      padding: 18px 14px;
+      border-radius: 14px;
+    }
+
+    .page-head {
+      gap: 11px;
+      padding-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .brand-mark { width: 40px; height: 40px; border-radius: 11px; }
+    .brand-mark svg { width: 20px; height: 20px; }
+    .page-title { font-size: 17px; }
+    .page-sub { font-size: 12px; }
+    .head-badge { display: none; }
+
+    .dropzone { margin-top: 16px; padding: 26px 12px; }
+    .dz-icon { width: 42px; height: 42px; margin-bottom: 10px; }
+    .dz-main { font-size: 14px; }
+    .dz-sub { font-size: 12px; line-height: 1.6; }
+
+    .file-row { flex-wrap: wrap; row-gap: 6px; padding: 10px 12px; }
+    .file-name { flex: 1 1 100%; order: -1; }
+    .file-meta { margin-right: auto; }
+
+    .filter-bar { padding: 14px; }
+    .filter-head { padding-bottom: 10px; margin-bottom: 12px; }
+    .filter-grid { grid-template-columns: 1fr; gap: 10px; }
+    .filter-item { width: 100%; }
+    .filter-item.span-2,
+    .filter-item.span-all { grid-column: auto; }
+    .filter-item select,
+    .filter-item input[type="text"],
+    .ms-trigger { height: 42px; }
+    .filter-tip { font-size: 11px; }
+
+    .actions { gap: 8px; margin-top: 18px; padding-top: 16px; }
+    .actions .btn { min-height: 44px; }
+    .actions > .btn.btn-primary { flex: 1 1 100%; }
+    .actions > .btn,
+    .actions > .print-panel { flex: 1 1 calc(50% - 4px); }
+    .actions > .btn-danger-text { flex: 0 0 auto; margin-left: auto; }
+    .actions .print-panel > summary {
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+    }
+    .print-panel-body {
+      left: auto;
+      right: 0;
+      width: min(280px, calc(100vw - 48px));
+      min-width: 0;
+    }
+
+    .report-head h1 { font-size: 17px; letter-spacing: 1px; }
+    .report-meta { font-size: 11.5px; text-align: left; }
+    .kpi-card { padding: 14px 15px; }
+    .kpi-main { font-size: 20px; }
+    .section-title { font-size: 14px; }
+    .um-summary { padding: 12px; }
+    .um-sum-item { flex-basis: 100%; padding: 6px 0; }
+    .um-sum-divider { display: none; }
+    .um-sum-note { padding-left: 0; margin-left: 0; }
+    table.rpt { font-size: 11.5px; }
+    table.rpt th,
+    table.rpt td { padding: 6px 7px; }
+    .match-list { max-width: none; }
+    .notes { padding: 12px 14px; font-size: 12px; }
+    .empty-report { padding: 40px 0; }
+  }
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+  <div class="page-card no-print">
+  <div class="page-head">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+        <path d="M14 3v5h5"/>
+        <path d="M9 13h6M9 17h4"/>
+      </svg>
+    </div>
+    <div class="page-head-text">
+      <h1 class="page-title">收付款情况分析</h1>
+      <p class="page-sub">上传发票数据与银行交易明细（支持多文件、可混合上传），自动核对开票与收付款情况并生成核对报告</p>
+    </div>
+    <span class="head-badge"><i></i>本地解析</span>
+  </div>
+
+    <div class="dropzone" id="dropZone"
+         onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="dz-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16V4"/>
+          <path d="m7 9 5-5 5 5"/>
+          <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+        </svg>
+      </div>
+      <div class="dz-main">点击选择文件，或将文件拖拽到此处</div>
+      <div class="dz-sub">支持 .xlsx / .xls / .csv，可一次选择多个文件；发票文件与银行明细自动识别</div>
+    </div>
+    <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFiles(event)">
+
+    <div class="file-head" id="fileHead" style="display:none;">
+      <span class="file-head-title">已上传文件<span class="file-count" id="fileCount">0</span></span>
+      <button type="button" class="filter-reset" id="fileFoldBtn" onclick="toggleFileList()">收起<i class="chev"></i></button>
+    </div>
+    <div class="file-list" id="fileList"></div>
+    <div class="status-bar" id="statusBar"></div>
+
+    <div class="filter-bar" id="filterBar" style="display:none;">
+      <div class="filter-head">
+        <span class="filter-title">筛选条件</span>
+        <div class="filter-head-actions">
+          <button type="button" class="filter-reset" onclick="resetFilters()">重置筛选</button>
+          <button type="button" class="filter-reset" id="filterFoldBtn" onclick="toggleFilterBar()">收起<i class="chev"></i></button>
+        </div>
+      </div>
+      <div class="filter-grid">
+        <div class="filter-item">
+          <label>年份</label>
+          <div class="multi-select" id="yearSelect">
+            <button type="button" class="ms-trigger" id="yearTrigger" onclick="toggleYearPanel(event)">全部年份</button>
+            <div class="ms-panel" id="yearPanel"></div>
+          </div>
+        </div>
+        <div class="filter-item span-2">
+          <label for="fDateStart">日期区间</label>
+          <div class="date-pair">
+            <input type="date" id="fDateStart" onchange="onFilterChange('date')">
+            <span class="date-sep">至</span>
+            <input type="date" id="fDateEnd" onchange="onFilterChange('date')">
+          </div>
+        </div>
+        <div class="filter-item">
+          <label for="fDirection">方向</label>
+          <select id="fDirection" onchange="onFilterChange('direction')">
+            <option value="all">全部</option>
+            <option value="recv">应收（销售）</option>
+            <option value="pay">应付（采购）</option>
+            <option value="unmatched">无对应发票往来单位</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label for="fSettle">核对状态</label>
+          <select id="fSettle" onchange="onFilterChange('settle')">
+            <option value="">全部</option>
+            <option value="open">未结清</option>
+            <option value="done">已结清</option>
+            <option value="over">多收/多付（超开票）</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label for="fCompany">往来单位</label>
+          <select id="fCompany" onchange="onFilterChange('company')"><option value="">全部单位</option></select>
+        </div>
+        <div class="filter-item span-all">
+          <label for="fKeyword">关键词</label>
+          <input type="text" id="fKeyword" placeholder="往来单位名称模糊筛选" oninput="onKeywordChange()">
+        </div>
+      </div>
+      <p class="filter-tip">筛选后自动重算报告；日期可精确到天，填起止日期后仅列示该区间发票，银行流水仍取到最新参与核销（先开票后汇款可结清）；单位表右侧可单独生成该单位报告</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="buildBtn" onclick="buildReport()">生成核对报告</button>
+      <button class="btn btn-outline" onclick="printReport()">打印报告</button>
+      <details class="print-panel no-print" id="printPanel">
+        <summary>选择打印部分</summary>
+        <div class="print-panel-body">
+          <label class="print-opt"><input type="checkbox" checked onchange="toggleSectionPrint('kpi', this.checked)"> 汇总卡片（应收 / 应付）</label>
+          <label class="print-opt"><input type="checkbox" checked onchange="toggleSectionPrint('operating', this.checked)"> 经营测算</label>
+          <label class="print-opt"><input type="checkbox" checked onchange="toggleSectionPrint('recvGroup', this.checked)"> 应收（销售开票）— 按往来单位核对</label>
+          <label class="print-opt"><input type="checkbox" checked onchange="toggleSectionPrint('payGroup', this.checked)"> 应付（取得发票）— 按往来单位核对</label>
+          <label class="print-opt"><input type="checkbox" checked onchange="toggleSectionPrint('companyBanks', this.checked)"> 单户银行流水明细（仅单户报告）</label>
+          <label class="print-opt"><input type="checkbox" checked onchange="toggleSectionPrint('recvDetail', this.checked)"> 应收（销售开票）— 发票明细核对</label>
+          <label class="print-opt"><input type="checkbox" checked onchange="toggleSectionPrint('payDetail', this.checked)"> 应付（取得发票）— 发票明细核对</label>
+          <label class="print-opt"><input type="checkbox" id="printUnmatched" checked onchange="toggleUnmatchedPrint(this.checked)"> 无票资金往来</label>
+          <label class="print-opt"><input type="checkbox" id="printNotes" onchange="togglePrintNotes(this.checked)"> 核对说明</label>
+          <div class="print-panel-tip">勾选的部分才进入打印；屏幕显示不受影响，点击「打印报告」生效。</div>
+        </div>
+      </details>
+      <button class="btn btn-outline btn-danger-text" onclick="clearAll()">清空数据</button>
+    </div>
+  </div>
+
+  <div class="report" id="report" style="display:none;"></div>
+</div>
+
+<script src="xlsx.full.min.js"></script>
+<script src="common.js"></script>
+<script>
+// 独立单页，不渲染顶部导航
+renderFooter();
+
+/* ============ 全局状态 ============ */
+var fileRecords = [];
+var fileSeq = 0;
+var model = null;
+var reportView = 'full'; // full=收付款核对报告；unmatched=无票资金往来独立报告；unmatchedCompany=无票单户报告
+var unmatchedReturnView = 'full'; // 无票单户报告的来源视图
+var unmatchedCompanyName = '';
+var filters = { years: [], dateStart: '', dateEnd: '', direction: 'all', settle: '', company: '', keyword: '' };
+var includeNotesInPrint = false;
+var includeUnmatchedInPrint = true;
+
+/* ============ 工具函数 ============ */
+function pad2(n) { return String(n).length < 2 ? '0' + n : String(n); }
+
+function toNum(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  var s = String(v == null ? '' : v).replace(/[,，\s¥￥]/g, '').replace(/[^\d.\-]/g, '');
+  var n = Number(s);
+  return isFinite(n) ? n : 0;
+}
+
+function r2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+
+function fmtMoney(n) {
+  var v = r2(n);
+  return v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function normName(s) {
+  return String(s == null ? '' : s)
+    .replace(/\s+/g, '')
+    .replace(/（/g, '(')
+    .replace(/）/g, ')')
+    .replace(/[，,]/g, '');
+}
+
+function normalizeDate(v) {
+  if (v == null || v === '') return '';
+  var s = String(v).trim();
+  var m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if (m) return m[1] + '-' + pad2(m[2]) + '-' + pad2(m[3]);
+  // 银行交易时间常为 yyyyMMdd / yyyyMMddHHmmss 数字，需先于 Excel 序列号解析
+  if (/^\d{8}/.test(s)) return s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8);
+  if (typeof v === 'number') {
+    if (XLSX && XLSX.SSF && XLSX.SSF.parse_date_code) {
+      var d = XLSX.SSF.parse_date_code(v);
+      if (d) return d.y + '-' + pad2(d.m) + '-' + pad2(d.d);
+    }
+    return '';
+  }
+  return s.slice(0, 10);
+}
+
+function sizeText(bytes) {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+function colIndex(headers, candidates) {
+  var i, j;
+  for (i = 0; i < candidates.length; i++) {
+    var exact = headers.indexOf(candidates[i]);
+    if (exact !== -1) return exact;
+  }
+  for (i = 0; i < candidates.length; i++) {
+    for (j = 0; j < headers.length; j++) {
+      if (headers[j] && headers[j].indexOf(candidates[i]) !== -1) return j;
+    }
+  }
+  return -1;
+}
+
+function findHeaderRow(rows, test) {
+  var max = Math.min(rows.length, 15);
+  for (var i = 0; i < max; i++) {
+    var h = (rows[i] || []).map(function(c) { return String(c == null ? '' : c).trim(); });
+    if (test(h)) return i;
+  }
+  return -1;
+}
+
+// 部分银行在表头前放置账户信息块，用于补齐「本方账号」「账户名称」
+function findMetaValue(rows, hIdx, labels) {
+  for (var i = 0; i < hIdx; i++) {
+    var row = rows[i] || [];
+    var label = String(row[0] == null ? '' : row[0]).replace(/[:：\s]/g, '');
+    if (labels.indexOf(label) === -1) continue;
+    for (var j = 1; j < row.length; j++) {
+      var val = String(row[j] == null ? '' : row[j]).trim();
+      if (val) return val;
+    }
+  }
+  return '';
+}
+
+function isInvoiceHeader(h) {
+  return h.indexOf('价税合计') !== -1 &&
+    (colIndex(h, ['数电发票号码', '发票号码']) !== -1) &&
+    (colIndex(h, ['销方名称', '销售方名称']) !== -1 || colIndex(h, ['购买方名称', '购方名称']) !== -1);
+}
+
+function isBankHeader(h) {
+  var hasDate = colIndex(h, ['交易时间', '交易日期', '记账日期', '入账日期']) !== -1;
+  var hasCp = colIndex(h, ['对方户名', '对方账户名称', '对方账号名称', '交易对手']) !== -1;
+  var hasAmt = h.indexOf('收入') !== -1 || h.indexOf('支出') !== -1 ||
+    colIndex(h, ['交易金额', '金额', '借方发生额', '贷方发生额']) !== -1;
+  return hasDate && hasCp && hasAmt;
+}
+
+/* ============ 文件解析 ============ */
+function handleFiles(e) {
+  var files = [].slice.call((e.target && e.target.files) || []);
+  if (!files.length) return;
+  e.target.value = '';
+  addFiles(files);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  var zone = document.getElementById('dropZone');
+  zone.classList.remove('drag');
+  var files = [].slice.call((e.dataTransfer && e.dataTransfer.files) || []);
+  if (!files.length) return;
+  addFiles(files);
+}
+
+function addFiles(files) {
+  setStatus('loading', '<span class="spinner"></span>正在解析 ' + files.length + ' 个文件…');
+  var chain = Promise.resolve();
+  files.forEach(function(file) {
+    chain = chain.then(function() {
+      return readRecord(file).then(function(rec) {
+        fileRecords.push(rec);
+        renderFileList();
+      });
+    });
+  });
+  chain.then(function() {
+    var fail = fileRecords.filter(function(r) { return r.error; }).length;
+    var hasInv = fileRecords.some(function(r) { return r.kind === 'invoice'; });
+    var hasBank = fileRecords.some(function(r) { return r.kind === 'bank'; });
+    if (fail) {
+      setStatus('warn', '部分文件解析失败（' + fail + ' 个），请检查文件格式。');
+    } else if (hasInv && hasBank) {
+      setStatus('success', '✓ 文件已解析：发票 ' + allInvoices().length + ' 张，银行流水 ' + allBanks().length + ' 笔，已自动生成核对报告。');
+      showFilterBar(true);
+      fillFilterOptions(false);
+      buildReport();
+    } else if (hasInv) {
+      setStatus('warn', '已解析发票数据，请继续上传银行交易明细文件。');
+    } else if (hasBank) {
+      setStatus('warn', '已解析银行明细，请继续上传发票数据文件。');
+    } else {
+      setStatus('error', '未识别到发票或银行明细数据，请确认上传的文件。');
+    }
+  }).catch(function(err) {
+    setStatus('error', '解析失败：' + (err && err.message ? err.message : err));
+  });
+}
+
+function readRecord(file) {
+  return new Promise(function(resolve) {
+    var rec = {
+      id: ++fileSeq,
+      name: file.name,
+      size: file.size,
+      kind: 'unknown',
+      mirror: false,
+      owner: '',
+      invoices: [],
+      banks: [],
+      banksRaw: [],
+      error: ''
+    };
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        var invMap = new Map();
+        var bankMap = new Map();
+
+        wb.SheetNames.forEach(function(sheetName) {
+          var rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '', raw: true });
+          if (!rows.length) return;
+
+          // 浦发交易对手明细打印单由 PDF 转换而来，多列内容合并在换行单元格中，且每页重复表头
+          if (isPufaBankSheet(rows)) {
+            parsePufaBankSheet(rows, bankMap);
+            return;
+          }
+
+          var invHead = findHeaderRow(rows, isInvoiceHeader);
+          var bankHead = findHeaderRow(rows, isBankHeader);
+
+          if (invHead !== -1 && (bankHead === -1 || invHead <= bankHead)) {
+            parseInvoiceSheet(rows, invHead, invMap);
+          } else if (bankHead !== -1) {
+            parseBankSheet(
+              rows,
+              bankHead,
+              bankMap,
+              findMetaValue(rows, bankHead, ['账号', '账户账号', '本方账号']),
+              findMetaValue(rows, bankHead, ['账户名称', '户名', '账户名'])
+            );
+          }
+        });
+
+        rec.invoices = Array.from(invMap.values());
+        rec.banksRaw = Array.from(bankMap.values());
+        rec.banks = rec.banksRaw;
+        rec.owner = rec.banksRaw.length ? (rec.banksRaw[0].owner || '') : '';
+        if (rec.invoices.length && rec.banks.length) {
+          rec.kind = rec.invoices.length >= rec.banks.length ? 'invoice' : 'bank';
+        } else if (rec.invoices.length) {
+          rec.kind = 'invoice';
+        } else if (rec.banks.length) {
+          rec.kind = 'bank';
+        } else {
+          rec.error = '未识别到可用的发票或银行明细数据';
+        }
+      } catch (err) {
+        rec.error = err && err.message ? err.message : '解析失败';
+      }
+      resolve(rec);
+    };
+    reader.onerror = function() { rec.error = '文件读取失败'; resolve(rec); };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// 一张发票可能跨多行：同一张表内按发票号累加，表与表之间用「首次出现」去重
+function parseInvoiceSheet(rows, hIdx, invMap) {
+  var headers = rows[hIdx].map(function(c) { return String(c == null ? '' : c).trim(); });
+  var iNoDigital = colIndex(headers, ['数电发票号码']);
+  var iNoPaper = colIndex(headers, ['发票号码']);
+  var iCode = colIndex(headers, ['发票代码']);
+  var iAmt = colIndex(headers, ['价税合计']);
+  var iSeller = colIndex(headers, ['销方名称', '销售方名称']);
+  var iBuyer = colIndex(headers, ['购买方名称', '购方名称']);
+  var iDate = colIndex(headers, ['开票日期']);
+  var iStatus = colIndex(headers, ['发票状态']);
+  var iGoods = colIndex(headers, ['货物或应税劳务名称', '货物或应税劳务、服务名称', '服务名称', '项目名称', '商品名称', '货物名称']);
+  if (iNoDigital === -1 && iNoPaper === -1) return;
+  if (iAmt === -1) return;
+
+  var sheetMap = new Map();
+  for (var i = hIdx + 1; i < rows.length; i++) {
+    var row = rows[i] || [];
+    // 旧版发票「数电发票号码」常为 --，需回退到「发票号码」
+    var digitalNo = iNoDigital !== -1 ? String(row[iNoDigital] == null ? '' : row[iNoDigital]).trim() : '';
+    var paperNo = iNoPaper !== -1 ? String(row[iNoPaper] == null ? '' : row[iNoPaper]).trim() : '';
+    var no = /\d{6,}/.test(digitalNo) ? digitalNo : paperNo;
+    if (!no || !/\d{6,}/.test(no)) continue;
+    var code = iCode !== -1 ? String(row[iCode] == null ? '' : row[iCode]).trim() : '';
+    var key = (code ? code + '-' : '') + no;
+
+    var item = sheetMap.get(key);
+    if (!item) {
+      item = {
+        key: key,
+        no: no,
+        date: iDate !== -1 ? normalizeDate(row[iDate]) : '',
+        seller: iSeller !== -1 ? String(row[iSeller] == null ? '' : row[iSeller]).trim() : '',
+        buyer: iBuyer !== -1 ? String(row[iBuyer] == null ? '' : row[iBuyer]).trim() : '',
+        amount: 0,
+        goods: '',
+        status: iStatus !== -1 ? String(row[iStatus] == null ? '' : row[iStatus]).trim() : ''
+      };
+      sheetMap.set(key, item);
+    }
+    // 同一张发票可能有多个商品行，用于识别住宿、餐饮类个人支付发票
+    var goods = iGoods !== -1 ? String(row[iGoods] == null ? '' : row[iGoods]).trim() : '';
+    if (goods && item.goods.indexOf(goods) === -1) {
+      item.goods = item.goods ? item.goods + '；' + goods : goods;
+    }
+    item.amount = r2(item.amount + toNum(row[iAmt]));
+  }
+  sheetMap.forEach(function(item, key) {
+    // 已作废发票不构成应收应付，直接不参与核对（常见于作废后重开的同额发票）
+    if (String(item.status || '').indexOf('作废') !== -1) return;
+    var exist = invMap.get(key);
+    if (!exist) { invMap.set(key, item); return; }
+    // 跨工作表合并：其中一个表没有商品名称列时，用另一个表的补齐
+    if (!exist.goods && item.goods) exist.goods = item.goods;
+  });
+}
+
+// 浦发交易对手明细打印单：PDF 转 Excel 后，序号、日期、借贷、流水号、金额挤在换行单元格中
+function isPufaBankSheet(rows) {
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i] || [];
+    for (var j = 0; j < row.length; j++) {
+      if (String(row[j] == null ? '' : row[j]).indexOf('上海浦东发展银行交易对手明细打印单') !== -1) return true;
+    }
+  }
+  return false;
+}
+
+function pufaCellLines(v) {
+  return String(v == null ? '' : v).split(/\r?\n/).map(function(s) { return s.trim(); })
+    .filter(function(s) { return !!s; });
+}
+
+function parsePufaBankSheet(rows, bankMap) {
+  var account = '', owner = '';
+  rows.forEach(function(row) {
+    (row || []).forEach(function(cell) {
+      var text = String(cell == null ? '' : cell);
+      if (!account) {
+        var a = text.match(/账号[：:]\s*(\d{6,})/);
+        if (a) account = a[1];
+      }
+      if (!owner) {
+        var o = text.match(/客户户名[：:]\s*([^\n]+)/);
+        if (o) owner = o[1].trim();
+      }
+    });
+  });
+
+  rows.forEach(function(row) {
+    row = row || [];
+    var left = pufaCellLines(row[0]);
+    if (left.length < 3 || !/^\d+$/.test(left[0])) return;
+
+    var flagIndex = -1;
+    for (var i = 1; i < left.length; i++) {
+      if (left[i] === '借' || left[i] === '贷') { flagIndex = i; break; }
+    }
+    if (flagIndex === -1) return;
+
+    // 正常行：序号/日期/借贷在第 1 列，流水号/金额在第 2 列；
+    // 转换错位列：序号/流水号/日期+金额/借贷全部挤在第 1 列。
+    var date = '', serial = '', amount = 0;
+    for (var j = 1; j < flagIndex; j++) {
+      var dm = left[j].match(/^(\d{8})(?:\s+([\d,]+(?:\.\d+)?))?$/);
+      if (!dm) continue;
+      date = dm[1];
+      if (dm[2]) {
+        amount = toNum(dm[2]);
+        serial = left[j - 1] || '';
+      } else {
+        var amountCell = pufaCellLines(row[1]);
+        serial = amountCell[0] || '';
+        amount = toNum(amountCell[1]);
+      }
+      break;
+    }
+    if (!date || !amount) return;
+
+    var flag = left[flagIndex];
+    var detail = pufaCellLines(row[2]); // 摘要 / 余额 / 对方账号
+    var cpInfo = pufaCellLines(row[5]); // 对方名称 / 对方行名 / 对方行号
+    var cp = (cpInfo[0] || '').replace(/^[|｜]\s*/, '').trim();
+    serial = serial.replace(/^[|｜]\s*/, '').trim();
+    var income = flag === '贷' ? amount : 0;
+    var expense = flag === '借' ? amount : 0;
+    // 柜员流水号可能重复（例如同日手续费与本金），必须连同序号、日期、金额一起去重
+    var key = ['pufa', account, left[0], date, serial, flag, r2(amount), detail[2] || ''].join('|');
+    if (bankMap.has(key)) return;
+
+    bankMap.set(key, {
+      key: key,
+      date: normalizeDate(date),
+      income: r2(income),
+      expense: r2(expense),
+      cp: cp,
+      purpose: detail[0] || '',
+      account: account,
+      owner: owner,
+      card: '',
+      cpAccount: detail[2] || '',
+      cpBank: cpInfo[1] || ''
+    });
+  });
+}
+
+// 银行流水：按流水号去重；收入 / 支出拆成两个方向
+function parseBankSheet(rows, hIdx, bankMap, metaAccount, metaOwner) {
+  var headers = rows[hIdx].map(function(c) { return String(c == null ? '' : c).trim(); });
+  var iTime = colIndex(headers, ['交易时间']);
+  var iDate = colIndex(headers, ['交易日期', '记账日期', '入账日期']);
+  var iIn = colIndex(headers, ['收入', '贷方发生额', '收入金额']);
+  var iOut = colIndex(headers, ['支出', '借方发生额', '支出金额']);
+  var iAmt = colIndex(headers, ['交易金额', '发生额', '金额']);
+  var iFlag = colIndex(headers, ['借贷标志', '收付标志', '收支方向', '借贷方向']);
+  var iCp = colIndex(headers, ['对方户名', '对方账户名称', '对方账号名称', '交易对手']);
+  var iSerial = colIndex(headers, ['核心唯一流水号', '交易流水号', '业务流水号', '流水号']);
+  var iPurpose = colIndex(headers, ['交易用途', '用途']);
+  var iSummary = colIndex(headers, ['摘要']);
+  var iRemark = colIndex(headers, ['备注', '附言', '交易备注']);
+  var iAcct = colIndex(headers, ['本方账号', '账户账号', '账号']);
+  // 「账号」「户名」的模糊匹配可能落到对方列，需排除
+  if (iAcct !== -1 && headers[iAcct].indexOf('对方') !== -1) iAcct = -1;
+  var iOwner = colIndex(headers, ['本方户名', '账户名称', '户名']);
+  if (iOwner !== -1 && headers[iOwner].indexOf('对方') !== -1) iOwner = -1;
+  var iCard = colIndex(headers, ['单位结算卡卡号', '卡号']);
+  var iCpAcct = colIndex(headers, ['对方账号', '对方账户']);
+  var iCpBank = colIndex(headers, ['对方账号开户行', '对方开户行']);
+
+  for (var i = hIdx + 1; i < rows.length; i++) {
+    var row = rows[i] || [];
+    var income = iIn !== -1 ? toNum(row[iIn]) : 0;
+    var expense = iOut !== -1 ? toNum(row[iOut]) : 0;
+
+    if (iIn === -1 && iOut === -1 && iAmt !== -1) {
+      var amt = toNum(row[iAmt]);
+      var flag = iFlag !== -1 ? String(row[iFlag] || '') : '';
+      if (/借|付|支出|出/.test(flag)) expense = Math.abs(amt);
+      else income = Math.abs(amt);
+    } else if (income < 0) {
+      expense += Math.abs(income); income = 0;
+    } else if (expense < 0) {
+      income += Math.abs(expense); expense = 0;
+    }
+
+    if (!income && !expense) continue;
+
+    var date = normalizeDate(iTime !== -1 ? row[iTime] : '') || normalizeDate(iDate !== -1 ? row[iDate] : '');
+    var rawTime = iTime !== -1 ? String(row[iTime] == null ? '' : row[iTime]).trim() : '';
+    var cp = iCp !== -1 ? String(row[iCp] == null ? '' : row[iCp]).trim() : '';
+    var account = iAcct !== -1 ? String(row[iAcct] == null ? '' : row[iAcct]).trim() : (metaAccount || '');
+    var owner = iOwner !== -1 ? String(row[iOwner] == null ? '' : row[iOwner]).trim() : (metaOwner || '');
+    var purposeParts = [];
+    [iPurpose, iSummary, iRemark].forEach(function(ix) {
+      if (ix === -1) return;
+      var val = String(row[ix] == null ? '' : row[ix]).trim();
+      if (val && purposeParts.indexOf(val) === -1) purposeParts.push(val);
+    });
+    var purpose = purposeParts.join(' ');
+    var serial = iSerial !== -1 ? String(row[iSerial] == null ? '' : row[iSerial]).trim() : '';
+    // 同一柜员流水号可能对应本金和手续费，需结合原始时间、金额、摘要等字段去重
+    var key = [serial, rawTime || date, cp, purpose, r2(income), r2(expense), account].join('|');
+    if (bankMap.has(key)) continue;
+
+    bankMap.set(key, {
+      key: key,
+      date: date,
+      income: r2(income),
+      expense: r2(expense),
+      cp: cp,
+      purpose: purpose,
+      account: account,
+      owner: owner,
+      card: iCard !== -1 ? String(row[iCard] == null ? '' : row[iCard]).trim() : '',
+      cpAccount: iCpAcct !== -1 ? String(row[iCpAcct] == null ? '' : row[iCpAcct]).trim() : '',
+      cpBank: iCpBank !== -1 ? String(row[iCpBank] == null ? '' : row[iCpBank]).trim() : ''
+    });
+  }
+}
+
+/* ============ 合并多文件数据 ============ */
+function allInvoices() {
+  var map = new Map();
+  fileRecords.forEach(function(rec) {
+    rec.invoices.forEach(function(inv) {
+      if (!map.has(inv.key)) map.set(inv.key, inv);
+    });
+  });
+  return Array.from(map.values());
+}
+
+function allBanks() {
+  var map = new Map();
+  fileRecords.forEach(function(rec) {
+    rec.banks.forEach(function(b) {
+      if (!map.has(b.key)) map.set(b.key, b);
+    });
+  });
+  return Array.from(map.values());
+}
+
+/* ============ 文件列表 / 状态 ============ */
+function renderFileList() {
+  var box = document.getElementById('fileList');
+  var head = document.getElementById('fileHead');
+  var count = document.getElementById('fileCount');
+  if (!fileRecords.length) {
+    box.innerHTML = '';
+    if (head) head.style.display = 'none';
+    return;
+  }
+  if (head) head.style.display = 'flex';
+  if (count) count.textContent = fileRecords.length;
+  box.innerHTML = fileRecords.map(function(rec) {
+    var typeLabel = rec.kind === 'invoice' ? '发票' : (rec.kind === 'bank' ? '银行' : '未知');
+    var typeCls = rec.kind === 'invoice' ? 'invoice' : (rec.kind === 'bank' ? 'bank' : 'unknown');
+    var meta = rec.error
+      ? '<span style="color:#dc2626;">' + escapeHTML(rec.error) + '</span>'
+      : (rec.kind === 'invoice'
+          ? rec.invoices.length + ' 张发票'
+          : (rec.kind === 'bank' ? rec.banks.length + ' 笔流水' + (rec.mirror ? '（已反转）' : '') : '未识别'));
+    var mirrorBox = (rec.kind === 'bank' && rec.owner)
+      ? '<label class="file-mirror' + (rec.mirror ? ' on' : '') + '" title="该文件由对方账户导出。勾选后收入、支出互换，往来单位取账户名称「' + escapeHTML(rec.owner) + '」">' +
+          '<input type="checkbox"' + (rec.mirror ? ' checked' : '') + ' onchange="toggleMirror(' + rec.id + ', this.checked)">' +
+          '对方流水' +
+        '</label>'
+      : '';
+    return '<div class="file-row">' +
+      '<span class="file-type ' + typeCls + '">' + typeLabel + '</span>' +
+      '<span class="file-name" title="' + escapeHTML(rec.name) + '">' + escapeHTML(rec.name) + '</span>' +
+      '<span class="file-meta">' + sizeText(rec.size) + ' ｜ ' + meta + '</span>' +
+      mirrorBox +
+      '<button class="file-del" onclick="removeFile(' + rec.id + ')">移除</button>' +
+    '</div>';
+  }).join('');
+}
+
+// 折叠 / 展开已上传文件列表
+function toggleFileList() {
+  var head = document.getElementById('fileHead');
+  var list = document.getElementById('fileList');
+  var status = document.getElementById('statusBar');
+  var btn = document.getElementById('fileFoldBtn');
+  var collapsed = head.classList.toggle('collapsed');
+  list.style.display = collapsed ? 'none' : '';
+  status.style.display = collapsed ? 'none' : '';
+  btn.innerHTML = (collapsed ? '展开' : '收起') + '<i class="chev"></i>';
+}
+
+// 折叠 / 展开筛选区
+function toggleFilterBar() {
+  var bar = document.getElementById('filterBar');
+  var btn = document.getElementById('filterFoldBtn');
+  var collapsed = bar.classList.toggle('collapsed');
+  btn.innerHTML = (collapsed ? '展开' : '收起') + '<i class="chev"></i>';
+}
+
+// 对方账户流水：收入、支出互换，往来单位取该账户名称
+function mirrorBank(b) {
+  return {
+    key: 'M|' + b.key,
+    date: b.date,
+    income: b.expense,
+    expense: b.income,
+    cp: b.owner || '',
+    purpose: b.purpose,
+    account: b.cpAccount || '',
+    owner: b.cp || '',
+    card: '',
+    cpAccount: b.account || '',
+    cpBank: ''
+  };
+}
+
+function toggleMirror(id, checked) {
+  var rec = fileRecords.filter(function(r) { return r.id === id; })[0];
+  if (!rec || rec.kind !== 'bank') return;
+  rec.mirror = !!checked;
+  rec.banks = rec.mirror ? rec.banksRaw.map(mirrorBank) : rec.banksRaw;
+  renderFileList();
+  fillFilterOptions(true);
+  buildReport();
+  showToast(rec.mirror ? '已按对方流水反转收支方向' : '已恢复本方流水方向', 'success');
+}
+
+function removeFile(id) {
+  fileRecords = fileRecords.filter(function(r) { return r.id !== id; });
+  renderFileList();
+  if (!fileRecords.length) {
+    clearAll();
+    return;
+  }
+  var hasInv = fileRecords.some(function(r) { return r.kind === 'invoice'; });
+  var hasBank = fileRecords.some(function(r) { return r.kind === 'bank'; });
+  if (hasInv && hasBank) {
+    showFilterBar(true);
+    fillFilterOptions(true);
+    buildReport();
+  } else {
+    model = null;
+    showFilterBar(false);
+    document.getElementById('report').style.display = 'none';
+    setStatus('warn', '已移除文件，当前数据不足以生成报告。');
+  }
+}
+
+function clearAll() {
+  fileRecords = [];
+  model = null;
+  filters = { years: [], direction: 'all', settle: '', company: '', keyword: '' };
+  document.getElementById('fileList').innerHTML = '';
+  var fileHead = document.getElementById('fileHead');
+  fileHead.style.display = 'none';
+  fileHead.classList.remove('collapsed');
+  document.getElementById('fileList').style.display = '';
+  document.getElementById('statusBar').style.display = '';
+  document.getElementById('report').style.display = 'none';
+  document.getElementById('report').innerHTML = '';
+  showFilterBar(false);
+  setStatus('', '');
+  showToast('已清空数据', 'success');
+}
+
+function setStatus(type, html) {
+  var el = document.getElementById('statusBar');
+  if (!type) { el.className = 'status-bar'; el.innerHTML = ''; return; }
+  el.className = 'status-bar show ' + type;
+  el.innerHTML = html;
+}
+
+function escapeHTML(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ============ 核对逻辑 ============ */
+var TOL = 0.1; // 尾差容忍：0.1 元以内视为已结清
+
+function isRedInvoice(inv) {
+  return inv.amount <= 0 || String(inv.status || '').indexOf('红冲') !== -1;
+}
+
+function directionOf(inv, our) {
+  if (inv.seller === our && inv.buyer !== our) return 'recv';
+  if (inv.buyer === our && inv.seller !== our) return 'pay';
+  return '';
+}
+
+// 住宿、餐饮类进项发票通常由个人垫付：计入应付开票金额，视为结清，但不算公司已付款、也不算未付款
+var PERSONAL_GOODS_RE = /住宿|餐饮|餐费|伙食/;
+var PERSONAL_SELLER_RE = /酒店|宾馆|旅馆|饭店|酒楼|餐饮/;
+
+function isPersonalInvoice(inv) {
+  var goods = String(inv.goods || '');
+  if (PERSONAL_GOODS_RE.test(goods)) return true;
+  // 有商品名称但未命中，说明是正常采购；仅在缺少商品名称时按销方名称兜底
+  if (goods) return false;
+  return PERSONAL_SELLER_RE.test(String(inv.seller || ''));
+}
+
+function detectOurCompany(invoices) {
+  var count = {};
+  invoices.forEach(function(inv) {
+    if (inv.seller) count[inv.seller] = (count[inv.seller] || 0) + 1;
+    if (inv.buyer) count[inv.buyer] = (count[inv.buyer] || 0) + 1;
+  });
+  var best = '', bestN = -1;
+  Object.keys(count).forEach(function(k) {
+    if (count[k] > bestN) { best = k; bestN = count[k]; }
+  });
+  return best;
+}
+
+/* ============ 筛选 ============ */
+function fillSelect(el, values, placeholder) {
+  var html = '<option value="">' + placeholder + '</option>';
+  values.forEach(function(v) {
+    html += '<option value="' + escapeHTML(v) + '">' + escapeHTML(v) + '</option>';
+  });
+  el.innerHTML = html;
+}
+
+function fillFilterOptions(keepCompany) {
+  var invoices = allInvoices();
+  var our = detectOurCompany(invoices);
+
+  // 年份：只列文件中存在的年份，支持多选
+  var years = [];
+  invoices.forEach(function(inv) {
+    var y = (inv.date || '').slice(0, 4);
+    if (y && years.indexOf(y) === -1) years.push(y);
+  });
+  years.sort();
+  filters.years = filters.years.filter(function(y) { return years.indexOf(y) !== -1; });
+  renderYearPanel(years);
+  updateYearTrigger();
+
+  // 方向
+  document.getElementById('fDirection').value = filters.direction;
+
+  // 结清状态：无票资金往来不涉及发票核销，该方向下不适用
+  var settleEl = document.getElementById('fSettle');
+  if (settleEl) {
+    settleEl.value = filters.settle;
+    settleEl.disabled = filters.direction === 'unmatched';
+  }
+
+  var kwEl = document.getElementById('fKeyword');
+  if (kwEl) kwEl.value = filters.keyword || '';
+
+  fillCompanyOptions(keepCompany);
+}
+
+// 年份多选：渲染勾选面板
+function renderYearPanel(years) {
+  var panel = document.getElementById('yearPanel');
+  if (!panel) return;
+  panel.innerHTML = years.map(function(y) {
+    return '<label class="ms-item"><input type="checkbox" class="year-item" data-year="' + y + '"' +
+      (filters.years.indexOf(y) !== -1 ? ' checked' : '') + ' onchange="onFilterChange(\'year\')">' + y + ' 年</label>';
+  }).join('') +
+  '<div class="ms-footer"><button type="button" class="ms-link" onclick="setAllYears(true)">全选</button><button type="button" class="ms-link" onclick="setAllYears(false)">清空</button></div>';
+}
+
+function toggleYearPanel(e) {
+  if (e) e.stopPropagation();
+  var panel = document.getElementById('yearPanel');
+  var trigger = document.getElementById('yearTrigger');
+  var willShow = !panel.classList.contains('show');
+  panel.classList.toggle('show', willShow);
+  trigger.classList.toggle('active', willShow);
+}
+
+function closeYearPanel() {
+  var panel = document.getElementById('yearPanel');
+  var trigger = document.getElementById('yearTrigger');
+  if (panel) panel.classList.remove('show');
+  if (trigger) trigger.classList.remove('active');
+}
+
+function updateYearTrigger() {
+  var trigger = document.getElementById('yearTrigger');
+  if (!trigger) return;
+  if (!filters.years.length) {
+    trigger.textContent = '全部年份';
+    trigger.classList.remove('chosen');
+  } else if (filters.years.length === 1) {
+    trigger.textContent = filters.years[0] + ' 年';
+    trigger.classList.add('chosen');
+  } else {
+    trigger.textContent = '已选 ' + filters.years.length + ' 个年份';
+    trigger.classList.add('chosen');
+  }
+}
+
+function setAllYears(checked) {
+  [].slice.call(document.querySelectorAll('.year-item')).forEach(function(b) { b.checked = checked; });
+  onFilterChange('year');
+}
+
+// 点击空白处收起年份面板
+document.addEventListener('click', function(e) {
+  var box = document.getElementById('yearSelect');
+  if (box && !box.contains(e.target)) closeYearPanel();
+});
+
+// 往来单位名称模糊筛选（不区分大小写），发票与银行流水同一口径
+function matchKeyword(name) {
+  if (!filters.keyword) return true;
+  return String(name || '').toLowerCase().indexOf(filters.keyword.toLowerCase()) !== -1;
+}
+
+function fillCompanyOptions(keepCompany) {
+  var invoices = allInvoices();
+  var our = detectOurCompany(invoices);
+  var map = new Map();
+
+  invoices.forEach(function(inv) {
+    if (filters.years.length && filters.years.indexOf((inv.date || '').slice(0, 4)) === -1) return;
+    if (!inDateRange(inv.date)) return;
+    var dir = directionOf(inv, our);
+    if (!dir) return;
+    if (filters.direction !== 'all' && dir !== filters.direction) return;
+    var cp = dir === 'recv' ? inv.buyer : inv.seller;
+    if (!cp) return;
+    if (!matchKeyword(cp)) return;
+    if (!map.has(normName(cp))) map.set(normName(cp), cp);
+  });
+
+  var names = Array.from(map.values()).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); });
+  fillSelect(document.getElementById('fCompany'), names, '全部单位');
+
+  var keep = keepCompany || '';
+  if (keep && names.indexOf(keep) !== -1) {
+    document.getElementById('fCompany').value = keep;
+    filters.company = keep;
+  } else {
+    filters.company = '';
+    document.getElementById('fCompany').value = '';
+  }
+}
+
+// 是否已启用精确到天的日期范围筛选（任一端填了即生效）
+function hasDateRange() {
+  return !!(filters.dateStart || filters.dateEnd);
+}
+
+// 日期字符串（YYYY-MM-DD）是否落在 [dateStart, dateEnd] 区间内；无日期记录在精确日期筛选下排除
+function inDateRange(d) {
+  if (!hasDateRange()) return true;
+  if (!d) return false;
+  var day = String(d).slice(0, 10);
+  if (filters.dateStart && day < filters.dateStart) return false;
+  if (filters.dateEnd && day > filters.dateEnd) return false;
+  return true;
+}
+
+function readFilters() {
+  filters.years = [].slice.call(document.querySelectorAll('.year-item:checked')).map(function(b) { return b.dataset.year; });
+  filters.years.sort();
+  filters.dateStart = (document.getElementById('fDateStart') || {}).value || '';
+  filters.dateEnd = (document.getElementById('fDateEnd') || {}).value || '';
+  if (filters.dateStart && filters.dateEnd && filters.dateStart > filters.dateEnd) {
+    var tmp = filters.dateStart; filters.dateStart = filters.dateEnd; filters.dateEnd = tmp;
+  }
+  filters.direction = document.getElementById('fDirection').value || 'all';
+  filters.settle = document.getElementById('fSettle').value || '';
+  filters.company = document.getElementById('fCompany').value || '';
+  filters.keyword = (document.getElementById('fKeyword').value || '').trim();
+}
+
+function showFilterBar(show) {
+  document.getElementById('filterBar').style.display = show ? 'flex' : 'none';
+}
+
+function onFilterChange(kind) {
+  readFilters();
+  if (kind !== 'company') {
+    // 切换年份/方向时保留当前往来单位（仍在新范围内才保留，否则回落到全部单位）
+    fillCompanyOptions(filters.company);
+  }
+  buildReport(false);
+}
+
+// 关键词输入防抖，避免每敲一个字就重算报告
+var keywordTimer = null;
+function onKeywordChange() {
+  if (keywordTimer) clearTimeout(keywordTimer);
+  keywordTimer = setTimeout(function() { onFilterChange('keyword'); }, 300);
+}
+
+function resetFilters() {
+  filters = { years: [], dateStart: '', dateEnd: '', direction: 'all', settle: '', company: '', keyword: '' };
+  var ds = document.getElementById('fDateStart'); if (ds) ds.value = '';
+  var de = document.getElementById('fDateEnd'); if (de) de.value = '';
+  fillFilterOptions(false);
+  buildReport(false);
+}
+
+// 从单户报告返回全部单位（保留年份、方向筛选）
+function backToAllCompanies() {
+  filters.company = '';
+  document.getElementById('fCompany').value = '';
+  buildReport(false);
+}
+
+// 单位表右侧「单户报告」
+function companyReport(side, idx) {
+  var d = side === 'recv' ? model.recv : model.pay;
+  var g = d.groups[idx];
+  if (!g) return;
+  filters.direction = side;
+  document.getElementById('fDirection').value = side;
+  fillCompanyOptions(g.name);
+  readFilters();
+  buildReport(false);
+}
+
+function buildReport(scrollToReport) {
+  if (!fileRecords.length) { showToast('请先上传数据文件', 'error'); return; }
+  var invoices = allInvoices();
+  var banks = allBanks();
+  if (!invoices.length) { showToast('未识别到发票数据，请检查发票文件', 'error'); return; }
+  if (!banks.length) { showToast('未识别到银行明细，请检查银行文件', 'error'); return; }
+
+  readFilters();
+  var our = detectOurCompany(invoices);
+  var useDateRange = hasDateRange();
+  var isUnmatched = filters.direction === 'unmatched';
+  var scope = invoices.filter(function(inv) {
+    var dir = directionOf(inv, our);
+    if (!dir) return false;
+    if (isUnmatched) {
+      // 无票方向：需用全量发票识别“有票单位”，只按年份/日期收缩判定范围；
+      // 不能应用公司/关键词筛选，否则未命中关键词的有票单位会被误判成无票
+      if (useDateRange && !inDateRange(inv.date)) return false;
+      if (!useDateRange && filters.years.length && filters.years.indexOf((inv.date || '').slice(0, 4)) === -1) return false;
+      return true;
+    }
+    // 应收/应付方向：完整历史发票先参与核销，之后按年份/日期收缩展示
+    if (filters.direction !== 'all' && dir !== filters.direction) return false;
+    var cp = dir === 'recv' ? inv.buyer : inv.seller;
+    if (filters.company && normName(cp) !== normName(filters.company)) return false;
+    if (!matchKeyword(cp)) return false;
+    return true;
+  });
+
+  // 无票方向：只列示所选区间的资金往来；
+  // 应收/应付：选了日期范围时流水不限制（延伸到最新，支持先开票后汇款），
+  // 否则选了年份时流水含以前年度、截至所选年份期末。
+  var bankScope = banks;
+  if (isUnmatched) {
+    if (useDateRange) {
+      bankScope = bankScope.filter(function(b) { return inDateRange(b.date); });
+    } else if (filters.years.length) {
+      bankScope = bankScope.filter(function(b) { return filters.years.indexOf((b.date || '').slice(0, 4)) !== -1; });
+    }
+  } else if (!useDateRange && filters.years.length) {
+    var endYear = filters.years.slice().sort().slice(-1)[0];
+    var endDate = endYear + '-12-31';
+    bankScope = bankScope.filter(function(b) {
+      // 无日期流水无法判断是否属于以后年度，保留参与核销，避免漏算；明确晚于期末的才排除
+      return !b.date || b.date <= endDate;
+    });
+  }
+  if (filters.company) {
+    var key = normName(filters.company);
+    bankScope = bankScope.filter(function(b) { return normName(b.cp) === key; });
+  }
+  if (filters.keyword) {
+    bankScope = bankScope.filter(function(b) { return matchKeyword(b.cp); });
+  }
+
+  var btn = document.getElementById('buildBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '生成中…'; }
+
+  // 全部销售发票的客户集合（不受方向筛选影响），用于判断供应商退款
+  var customerKeys = {};
+  invoices.forEach(function(inv) {
+    if (directionOf(inv, our) === 'recv') customerKeys[normName(inv.buyer)] = 1;
+  });
+  // 全部采购发票的供应商集合（不受方向筛选影响），用于判断客户退款
+  var supplierKeys = {};
+  invoices.forEach(function(inv) {
+    if (directionOf(inv, our) === 'pay') supplierKeys[normName(inv.seller)] = 1;
+  });
+
+  model = reconcile(scope, bankScope, filters, customerKeys, our, supplierKeys);
+  model.allInvoiceCount = invoices.length;
+  // 报告筛选范围只展示当前范围内实际有业务的年份
+  var scopeYears = [];
+  scope.forEach(function(inv) {
+    var y = (inv.date || '').slice(0, 4);
+    if (filters.years.length && filters.direction !== 'unmatched' && filters.years.indexOf(y) === -1) return;
+    if (y && scopeYears.indexOf(y) === -1) scopeYears.push(y);
+  });
+  scopeYears.sort();
+  // 判断所选年份是否已覆盖该公司（当前方向）的全部合作年份
+  var allYears = [];
+  if (filters.company) {
+    invoices.forEach(function(inv) {
+      var dir = directionOf(inv, our);
+      if (!dir) return;
+      if (filters.direction !== 'all' && dir !== filters.direction) return;
+      var cp = dir === 'recv' ? inv.buyer : inv.seller;
+      if (normName(cp) !== normName(filters.company)) return;
+      var y = (inv.date || '').slice(0, 4);
+      if (y && allYears.indexOf(y) === -1) allYears.push(y);
+    });
+    allYears.sort();
+  }
+  model.filters = {
+    years: filters.years.slice(),
+    displayYears: scopeYears,
+    coversAllYears: !!filters.company && allYears.length > 0 && scopeYears.length === allYears.length,
+    dateStart: filters.dateStart,
+    dateEnd: filters.dateEnd,
+    direction: filters.direction,
+    settle: filters.settle,
+    company: filters.company,
+    keyword: filters.keyword
+  };
+  model.dateRangeView = useDateRange;
+  model.dateStart = filters.dateStart;
+  model.dateEnd = filters.dateEnd;
+  // 有票方向：完整历史发票 + 截至最新流水核销后，按所选年份/日期收缩发票展示；
+  // 无票方向不涉及发票核销，不收缩。
+  if (filters.direction !== 'unmatched') {
+    if (useDateRange) applyDateRangeView(model);
+    else if (filters.years.length) applyYearView(model, filters.years);
+  }
+  // 结清/多收多付状态在核对完成后按单位收缩范围；无票资金往来不涉及发票核销，不适用
+  if (filters.settle && filters.direction !== 'unmatched') applySettleFilter(model, filters.settle);
+  if (filters.direction === 'unmatched') unmatchedReport();
+  else renderReport(model);
+
+  if (btn) { btn.disabled = false; btn.textContent = '生成核对报告'; }
+  document.getElementById('report').style.display = '';
+  if (scrollToReport !== false) {
+    var rep = document.getElementById('report');
+    if (rep.scrollIntoView) rep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function reconcile(invoices, banks, flt, customerKeys, ourCompany, supplierKeys) {
+  var our = ourCompany || detectOurCompany(invoices);
+  var recvInvoices = [], payInvoices = [], unknown = [];
+  invoices.forEach(function(inv) {
+    var dir = directionOf(inv, our);
+    if (dir === 'recv') recvInvoices.push(inv);
+    else if (dir === 'pay') payInvoices.push(inv);
+    else unknown.push(inv);
+  });
+
+  // 仅有采购发票、没有销售发票的单位：其银行收入视为供应商退款，冲减已付款
+  var customers = customerKeys || {};
+  var suppliers = supplierKeys || {};
+  var payRefundKeys = {};
+  payInvoices.forEach(function(inv) {
+    var k = normName(inv.seller);
+    if (!customers[k]) payRefundKeys[k] = 1;
+  });
+  // 仅有销售发票、没有采购发票的单位：其银行支出视为客户退款，冲减已回款
+  var recvRefundKeys = {};
+  recvInvoices.forEach(function(inv) {
+    var k = normName(inv.buyer);
+    if (!suppliers[k]) recvRefundKeys[k] = 1;
+  });
+
+  var recv = reconcileOne(recvInvoices, banks, 'recv', flt, recvRefundKeys, payRefundKeys);
+  var pay = reconcileOne(payInvoices, banks, 'pay', flt, payRefundKeys, recvRefundKeys);
+
+  var accounts = [];
+  banks.forEach(function(b) {
+    var a = b.account || b.card;
+    if (a && accounts.indexOf(a) === -1) accounts.push(a);
+  });
+
+  return {
+    our: our,
+    invoices: invoices,
+    banks: banks,
+    accounts: accounts,
+    recv: recv,
+    pay: pay,
+    unknown: unknown,
+    dates: dateRange(invoices, banks),
+    generatedAt: nowText()
+  };
+}
+
+function dateRange(invoices, banks) {
+  var list = [];
+  invoices.forEach(function(i) { if (i.date) list.push(i.date); });
+  banks.forEach(function(b) { if (b.date) list.push(b.date); });
+  list.sort();
+  if (!list.length) return '—';
+  return list[0] + ' 至 ' + list[list.length - 1];
+}
+
+function nowText() {
+  var d = new Date();
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
+    ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+function cpOf(inv, side) {
+  return side === 'recv' ? inv.buyer : inv.seller;
+}
+
+function reconcileOne(invoices, banks, side, flt, refundKeys, otherRefundKeys) {
+  var groups = new Map();
+  refundKeys = refundKeys || {};
+  otherRefundKeys = otherRefundKeys || {};
+
+  function ensure(name) {
+    var k = normName(name);
+    if (!groups.has(k)) {
+      groups.set(k, {
+        key: k,
+        name: name || '(未填写往来单位)',
+        invoices: [],
+        redInvoices: [],
+        txns: [],
+        refunds: [],
+        invoiceAmount: 0,
+        personalAmount: 0,
+        personalCount: 0,
+        payable: 0,
+        paid: 0,
+        unpaid: 0,
+        bankAmount: 0,
+        bankLeft: 0,
+        redCount: 0,
+        redAmount: 0,
+        refundTotal: 0
+      });
+    }
+    return groups.get(k);
+  }
+
+  invoices.forEach(function(inv) {
+    var g = ensure(cpOf(inv, side));
+    if (isRedInvoice(inv)) {
+      g.redInvoices.push(inv);
+      g.redCount++;
+      g.redAmount = r2(g.redAmount + inv.amount);
+      inv.paid = 0;
+      inv.remain = 0;
+      inv.matches = [];
+      inv.matchStatus = 'red';
+    } else {
+      g.invoices.push(inv);
+      inv.paid = 0;
+      inv.remain = inv.amount;
+      inv.matches = [];
+      inv.matchStatus = 'open';
+      // 应付方向的住宿、餐饮发票视为个人支付：保留金额、视为结清，不参与核销
+      inv.personal = side === 'pay' && isPersonalInvoice(inv);
+      if (inv.personal) {
+        inv.remain = 0;
+        inv.matchStatus = 'personal';
+      }
+    }
+  });
+
+  // 归集该方向的银行流水（收入→应收核销，支出→应付核销）
+  banks.forEach(function(b) {
+    var amt = side === 'recv' ? b.income : b.expense;
+    if (!amt) return;
+    var k = normName(b.cp);
+    if (!groups.has(k)) return; // 无对应发票往来单位，单独列示
+    groups.get(k).txns.push({
+      key: b.key || (side + '-' + k + '-' + groups.get(k).txns.length),
+      date: b.date,
+      amount: amt,
+      remaining: amt,
+      purpose: b.purpose,
+      account: b.account || b.card || '',
+      card: b.card || '',
+      cpAccount: b.cpAccount || '',
+      cpBank: b.cpBank || ''
+    });
+  });
+
+  // 反向流水视为退款：应收方向取支出（客户退回），应付方向取收入（供应商退款）
+  banks.forEach(function(b) {
+    var amt = side === 'recv' ? b.expense : b.income;
+    if (!amt) return;
+    var k = normName(b.cp);
+    if (!groups.has(k) || !refundKeys[k]) return;
+    groups.get(k).refunds.push({
+      date: b.date,
+      amount: amt,
+      purpose: b.purpose,
+      account: b.account || b.card || '',
+      cpAccount: b.cpAccount || '',
+      cpBank: b.cpBank || ''
+    });
+  });
+
+  var unmatchedBank = new Map();
+  var skipUnmatched = flt && flt.direction && flt.direction !== 'all' && flt.direction !== 'unmatched' && flt.direction !== side;
+  if (!skipUnmatched) banks.forEach(function(b) {
+    var amt = side === 'recv' ? b.income : b.expense;
+    if (!amt) return;
+    // 选了年份时，无对应发票的流水也只展示该年份
+    if (flt && flt.years && flt.years.length && flt.years.indexOf((b.date || '').slice(0, 4)) === -1) return;
+    var k = normName(b.cp);
+    if (groups.has(k)) return;
+    // 反向流水已作为退款在其他方向冲减，不再重复列为无对应发票流水
+    if (otherRefundKeys[k]) return;
+    if (!unmatchedBank.has(k)) {
+      unmatchedBank.set(k, { name: b.cp || '(无对方户名)', count: 0, amount: 0, purpose: '', cpAccounts: [], txns: [] });
+    }
+    var o = unmatchedBank.get(k);
+    o.count++;
+    o.amount = r2(o.amount + amt);
+    o.txns.push({
+      date: b.date,
+      amount: amt,
+      purpose: b.purpose,
+      account: b.account || b.card || '',
+      cpAccount: b.cpAccount || '',
+      cpBank: b.cpBank || ''
+    });
+    if (!o.purpose && b.purpose) o.purpose = b.purpose;
+    if (b.cpAccount && o.cpAccounts.indexOf(b.cpAccount) === -1) o.cpAccounts.push(b.cpAccount);
+  });
+
+  // 逐单位核销
+  groups.forEach(function(g) {
+    var list = g.invoices.filter(function(inv) { return !inv.personal; }).sort(byDateAsc);
+    var txns = g.txns.slice().sort(byDateAsc);
+    txns.forEach(function(t) { t.remaining = t.amount; });
+
+    // 同额优先（尾差 ±0.1 元），开票日与流水日相差不超过 3 个月，取日期最接近的一张
+    function runExact(t) {
+      while (t.remaining > TOL) {
+        var exact = null, best = Infinity;
+        for (var i = 0; i < list.length; i++) {
+          var cand = list[i];
+          if (cand.remain <= TOL || Math.abs(cand.remain - t.remaining) > TOL) continue;
+          if (!withinMonths(cand.date, t.date, 3)) continue;
+          var d = dateDist(cand.date, t.date);
+          if (d < best) { best = d; exact = cand; }
+        }
+        if (!exact) break;
+        bindPayment(exact, t, Math.min(exact.remain, t.remaining));
+      }
+    }
+
+    // 核销顺序（先冲旧账）：
+    // 1) 同额优先（尾差 ±0.1 元），开票日与流水日相差不超过 3 个月，取日期最接近的一张；
+    // 2) 按交易日期先后逐笔核销，先冲开票日期不晚于该笔流水的最早未结清发票（先票后款）；
+    //    当期无票可冲时，作为预收/预付余额冲抵其后最早未结清发票。
+    // 不再做「同月配对」「3 个月内优先」，确保新到账资金优先清偿历史旧账。
+    function runChrono(t) {
+      while (t.remaining > TOL) {
+        var inv = pickOpenInvoice(list, t.date) || pickOpenInvoice(list, '');
+        if (!inv) break;
+        bindPayment(inv, t, Math.min(inv.remain, t.remaining));
+      }
+    }
+
+    // 摘要含定价、订金、保证金的流水最后参与核销，普通流水优先占用发票
+    var normalTxns = [], deferredTxns = [];
+    txns.forEach(function(t) {
+      (isDeferredTxn(t) ? deferredTxns : normalTxns).push(t);
+    });
+    [normalTxns, deferredTxns].forEach(function(batch) {
+      batch.forEach(runExact);
+      batch.forEach(runChrono);
+    });
+
+    g.invoiceAmount = r2(g.invoices.reduce(function(s, i) { return s + i.amount; }, 0));
+    g.personalAmount = r2(g.invoices.reduce(function(s, i) { return s + (i.personal ? i.amount : 0); }, 0));
+    g.personalCount = g.invoices.filter(function(i) { return i.personal; }).length;
+    g.payable = r2(g.invoiceAmount - g.personalAmount); // 应公司承担的金额，个人支付部分不计入
+    g.paid = r2(g.invoices.reduce(function(s, i) { return s + i.paid; }, 0));
+    g.bankAmount = r2(g.txns.reduce(function(s, t) { return s + t.amount; }, 0));
+    g.grossBank = g.bankAmount;
+    g.bankLeft = r2(g.txns.reduce(function(s, t) { return s + t.remaining; }, 0));
+
+    // 退款冲减已回款 / 已付款：先冲未分配的流水，再按发票倒序冲减已核销金额
+    if (g.refunds.length) {
+      g.refundTotal = r2(g.refunds.reduce(function(s, r) { return s + r.amount; }, 0));
+      var rest = g.refundTotal;
+      if (g.bankLeft > TOL && rest > TOL) {
+        var cutUnalloc = Math.min(g.bankLeft, rest);
+        var cut = cutUnalloc;
+        g.txns.slice().sort(function(a, b) {
+          return (a.date || '') < (b.date || '') ? 1 : -1;
+        }).forEach(function(t) {
+          if (cut <= TOL || t.remaining <= TOL) return;
+          var c = Math.min(t.remaining, cut);
+          t.remaining = r2(t.remaining - c);
+          t.refundCut = r2((t.refundCut || 0) + c);
+          cut = r2(cut - c);
+        });
+        g.bankLeft = r2(g.bankLeft - cutUnalloc);
+        rest = r2(rest - cutUnalloc);
+      }
+      if (rest > TOL) {
+        var rev = g.invoices.slice().sort(function(a, b) {
+          return (a.date || '') < (b.date || '') ? 1 : -1;
+        });
+        rev.forEach(function(inv) {
+          if (rest <= TOL || inv.paid <= 0) return;
+          var c = Math.min(inv.paid, rest);
+          inv.paid = r2(inv.paid - c);
+          inv.refundCut = r2((inv.refundCut || 0) + c);
+          rest = r2(rest - c);
+        });
+      }
+      g.refundTotal = r2(g.refundTotal - rest); // 未能冲减的部分
+      g.bankAmount = r2(g.bankAmount - g.refundTotal);
+      g.paid = r2(g.invoices.reduce(function(s, i) { return s + i.paid; }, 0));
+    }
+    g.txns.forEach(function(t) { t.used = r2(t.amount - t.remaining - (t.refundCut || 0)); });
+
+    g.unpaid = Math.abs(g.payable - g.paid) <= TOL ? 0 : r2(g.payable - g.paid);
+
+    g.invoices.forEach(function(inv) {
+      if (inv.personal) { inv.remain = 0; inv.matchStatus = 'personal'; return; }
+      inv.remain = r2(inv.amount - inv.paid);
+      if (inv.remain <= TOL) inv.remain = 0;
+      inv.matchStatus = inv.remain <= TOL ? 'done' : (inv.paid > TOL ? 'partial' : 'open');
+    });
+
+    if (g.invoiceAmount <= TOL && g.paid <= TOL) g.status = g.redCount ? 'red' : 'done';
+    else if (g.unpaid <= TOL) g.status = 'done';
+    else if (g.paid > TOL) g.status = 'partial';
+    else g.status = 'open';
+  });
+
+  var groupList = Array.from(groups.values()).sort(function(a, b) {
+    return b.invoiceAmount - a.invoiceAmount;
+  });
+
+  var totalInvoice = r2(groupList.reduce(function(s, g) { return s + g.invoiceAmount; }, 0));
+  var totalPersonal = r2(groupList.reduce(function(s, g) { return s + (g.personalAmount || 0); }, 0));
+  var totalPersonalCount = groupList.reduce(function(s, g) { return s + (g.personalCount || 0); }, 0);
+  var totalPayable = r2(totalInvoice - totalPersonal);
+  var totalPaid = r2(groupList.reduce(function(s, g) { return s + g.paid; }, 0));
+  var totalBank = r2(groupList.reduce(function(s, g) { return s + g.bankAmount; }, 0));
+  var redCount = groupList.reduce(function(s, g) { return s + g.redCount; }, 0);
+  var redAmount = r2(groupList.reduce(function(s, g) { return s + Math.abs(g.redAmount || 0); }, 0));
+  var totalRefund = r2(groupList.reduce(function(s, g) { return s + (g.refundTotal || 0); }, 0));
+  // 合计同样应用尾差容忍，避免明细显示「已结清」而合计出现几分钱未结清
+  var totalUnpaid = Math.abs(totalPayable - totalPaid) <= TOL ? 0 : r2(totalPayable - totalPaid);
+
+  return {
+    groups: groupList,
+    totalInvoice: totalInvoice,
+    totalPersonal: totalPersonal,
+    totalPersonalCount: totalPersonalCount,
+    totalPayable: totalPayable,
+    totalPaid: totalPaid,
+    totalUnpaid: totalUnpaid,
+    totalBank: totalBank,
+    totalRefund: totalRefund,
+    rate: totalPayable > 0 ? (totalUnpaid === 0 ? 1 : totalPaid / totalPayable) : 0,
+    redCount: redCount,
+    redAmount: redAmount,
+    invoiceCount: invoices.length,
+    effectiveCount: invoices.length - redCount,
+    unmatchedBank: Array.from(unmatchedBank.values()).sort(function(a, b) { return b.amount - a.amount; }),
+    unmatchedBankTotal: r2(Array.from(unmatchedBank.values()).reduce(function(s, o) { return s + o.amount; }, 0))
+  };
+}
+
+function byDateAsc(a, b) {
+  return (a.date || '') < (b.date || '') ? -1 : ((a.date || '') > (b.date || '') ? 1 : 0);
+}
+
+// 报告数据期间：年份视图从所选发票起算、到实际参与核销的最新流水日止，避免被历史流水起点拉宽
+function updateReportDates(m) {
+  var invoiceDates = [];
+  m.invoices.forEach(function(inv) { if (inv.date) invoiceDates.push(inv.date); });
+  invoiceDates.sort();
+
+  if (m.yearView) {
+    if (!invoiceDates.length) { m.dates = '—'; return; }
+    var start = invoiceDates[0];
+    var end = invoiceDates[invoiceDates.length - 1];
+    m.banks.forEach(function(b) { if (b.date && b.date > end) end = b.date; });
+    m.dates = start === end ? start : start + ' 至 ' + end;
+    return;
+  }
+
+  var list = invoiceDates;
+  m.banks.forEach(function(b) { if (b.date) list.push(b.date); });
+  list.sort();
+  m.dates = list.length ? (list.length === 1 ? list[0] : list[0] + ' 至 ' + list[list.length - 1]) : '—';
+}
+
+// 收缩展示：完整历史发票与截至最新流水已完成核销，这里只保留 inView 选中的发票，
+// 保留各发票的真实核销结果；流水（含区间外）用于展示核销明细。
+// inView(inv) 返回 true 表示该发票在本次展示范围内。
+function applyShrinkView(m, inView) {
+  var keptKeys = {};
+  ['recv', 'pay'].forEach(function(sideKey) {
+    var side = m[sideKey];
+    if (!side) return;
+
+    side.groups = side.groups.map(function(g) {
+      // 先记录每笔流水对全部发票、本次范围发票的核销金额，再收缩发票列表
+      var matchedTotal = {};
+      var matchedView = {};
+      g.invoices.forEach(function(inv) {
+        var selected = inView(inv);
+        (inv.matches || []).forEach(function(x) {
+          if (!x.txnKey) return;
+          matchedTotal[x.txnKey] = r2((matchedTotal[x.txnKey] || 0) + x.amount);
+          if (selected) matchedView[x.txnKey] = r2((matchedView[x.txnKey] || 0) + x.amount);
+        });
+      });
+      g.txns.forEach(function(t) {
+        t.matchedTotal = r2(matchedTotal[t.key] || 0);
+        t.yearUsed = r2(matchedView[t.key] || 0); // 本次范围发票实际核销金额（供展示复用）
+      });
+
+      g.invoices = g.invoices.filter(inView);
+      g.redInvoices = g.redInvoices.filter(inView);
+      if (!g.invoices.length && !g.redInvoices.length) return null;
+
+      g.invoiceAmount = r2(g.invoices.reduce(function(s, inv) { return s + inv.amount; }, 0));
+      g.personalAmount = r2(g.invoices.reduce(function(s, inv) { return s + (inv.personal ? inv.amount : 0); }, 0));
+      g.personalCount = g.invoices.filter(function(inv) { return inv.personal; }).length;
+      g.payable = r2(g.invoiceAmount - g.personalAmount);
+      g.paid = r2(g.invoices.reduce(function(s, inv) { return s + inv.paid; }, 0));
+      g.unpaid = Math.abs(g.payable - g.paid) <= TOL ? 0 : r2(g.payable - g.paid);
+      g.redCount = g.redInvoices.length;
+      g.redAmount = r2(g.redInvoices.reduce(function(s, inv) { return s + inv.amount; }, 0));
+
+      if (g.invoiceAmount <= TOL && g.paid <= TOL) g.status = g.redCount ? 'red' : 'done';
+      else if (g.unpaid <= TOL) g.status = 'done';
+      else if (g.paid > TOL) g.status = 'partial';
+      else g.status = 'open';
+      return g;
+    }).filter(function(g) { return !!g; });
+
+    side.groups.forEach(function(g) { keptKeys[g.key] = 1; });
+    side.groups.sort(function(a, b) { return b.invoiceAmount - a.invoiceAmount; });
+    side.totalInvoice = r2(side.groups.reduce(function(s, g) { return s + g.invoiceAmount; }, 0));
+    side.totalPersonal = r2(side.groups.reduce(function(s, g) { return s + (g.personalAmount || 0); }, 0));
+    side.totalPersonalCount = side.groups.reduce(function(s, g) { return s + (g.personalCount || 0); }, 0);
+    side.totalPayable = r2(side.totalInvoice - side.totalPersonal);
+    side.totalPaid = r2(side.groups.reduce(function(s, g) { return s + g.paid; }, 0));
+    side.totalUnpaid = Math.abs(side.totalPayable - side.totalPaid) <= TOL ? 0 : r2(side.totalPayable - side.totalPaid);
+    side.totalBank = r2(side.groups.reduce(function(s, g) { return s + g.bankAmount; }, 0));
+    side.totalRefund = r2(side.groups.reduce(function(s, g) { return s + (g.refundTotal || 0); }, 0));
+    side.redCount = side.groups.reduce(function(s, g) { return s + g.redCount; }, 0);
+    side.redAmount = r2(side.groups.reduce(function(s, g) { return s + Math.abs(g.redAmount || 0); }, 0));
+    side.invoiceCount = side.groups.reduce(function(s, g) { return s + g.invoices.length + g.redCount; }, 0);
+    side.effectiveCount = side.invoiceCount - side.redCount;
+    side.rate = side.totalPayable > 0 ? (side.totalUnpaid === 0 ? 1 : side.totalPaid / side.totalPayable) : 0;
+  });
+
+  m.invoices = m.invoices.filter(inView);
+  m.banks = m.banks.filter(function(b) { return keptKeys[normName(b.cp)] === 1; });
+  updateReportDates(m);
+}
+
+// 年份视图：完整历史核销后，仅保留所选年份发票及其真实结清结果
+function applyYearView(m, years) {
+  var yearSet = {};
+  years.forEach(function(y) { yearSet[y] = 1; });
+  m.yearView = true;
+  m.yearEnd = years.slice().sort().slice(-1)[0] + '-12-31';
+  applyShrinkView(m, function(inv) { return yearSet[(inv.date || '').slice(0, 4)] === 1; });
+}
+
+// 日期视图：完整历史核销后，仅保留所选日期区间内的发票；流水延伸到最新参与核销，
+// 用于支持先开票后汇款（付款日晚于区间结束日）的场景。
+function applyDateRangeView(m) {
+  m.yearView = true; // 复用报告头流水笔数与明细的收缩展示口径
+  m.dateRangeView = true;
+  applyShrinkView(m, function(inv) { return inDateRange(inv.date); });
+}
+
+// 核对状态筛选：核对完成后按单位状态收缩报告范围，并重算各项合计
+function applySettleFilter(m, settle) {
+  function keep(g) {
+    if (settle === 'open') return g.status === 'open' || g.status === 'partial';
+    if (settle === 'over') return g.bankLeft > TOL; // 应收为回款超开票，应付为付款超开票
+    return g.status === 'done';
+  }
+
+  var keptKeys = {};
+  ['recv', 'pay'].forEach(function(sideKey) {
+    var side = m[sideKey];
+    if (!side) return;
+    side.groups = side.groups.filter(keep);
+    side.groups.forEach(function(g) { keptKeys[g.key] = 1; });
+
+    var totalInvoice = r2(side.groups.reduce(function(s, g) { return s + g.invoiceAmount; }, 0));
+    var totalPersonal = r2(side.groups.reduce(function(s, g) { return s + (g.personalAmount || 0); }, 0));
+    var totalPayable = r2(totalInvoice - totalPersonal);
+    var totalPaid = r2(side.groups.reduce(function(s, g) { return s + g.paid; }, 0));
+    var totalBank = r2(side.groups.reduce(function(s, g) { return s + g.bankAmount; }, 0));
+    var totalRefund = r2(side.groups.reduce(function(s, g) { return s + (g.refundTotal || 0); }, 0));
+    var redCount = side.groups.reduce(function(s, g) { return s + g.redCount; }, 0);
+    var redAmount = r2(side.groups.reduce(function(s, g) { return s + Math.abs(g.redAmount || 0); }, 0));
+    var invoiceCount = side.groups.reduce(function(s, g) { return s + g.invoices.length; }, 0);
+    var totalUnpaid = Math.abs(totalPayable - totalPaid) <= TOL ? 0 : r2(totalPayable - totalPaid);
+
+    side.totalInvoice = totalInvoice;
+    side.totalPersonal = totalPersonal;
+    side.totalPersonalCount = side.groups.reduce(function(s, g) { return s + (g.personalCount || 0); }, 0);
+    side.totalPayable = totalPayable;
+    side.totalPaid = totalPaid;
+    side.totalUnpaid = totalUnpaid;
+    side.totalBank = totalBank;
+    side.totalRefund = totalRefund;
+    side.redCount = redCount;
+    side.redAmount = redAmount;
+    side.invoiceCount = invoiceCount;
+    side.effectiveCount = invoiceCount - redCount;
+    side.rate = totalPayable > 0 ? (totalUnpaid === 0 ? 1 : totalPaid / totalPayable) : 0;
+  });
+
+  // 报告头「本次发票 / 参与核对的银行流水」同步收缩到保留单位
+  m.invoices = m.invoices.filter(function(inv) {
+    var dir = directionOf(inv, m.our);
+    var cp = dir === 'recv' ? inv.buyer : inv.seller;
+    return keptKeys[normName(cp)] === 1;
+  });
+  m.banks = m.banks.filter(function(b) { return keptKeys[normName(b.cp)] === 1; });
+  updateReportDates(m);
+  m.hideUnmatched = true; // 无票流水无结清概念，按结清状态筛选时不列示
+}
+
+// 两日期相差天数，用于同额匹配时优先取日期最接近的发票
+function dateDist(a, b) {
+  if (!a || !b) return 999999;
+  return Math.abs(new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000;
+}
+
+// 判断两个日期是否在指定月数以内（按自然月计算）
+function withinMonths(a, b, months) {
+  if (!a || !b) return false;
+  var earlier = a < b ? a : b;
+  var later = a < b ? b : a;
+  var limit = new Date(earlier + 'T00:00:00');
+  limit.setMonth(limit.getMonth() + months);
+  return new Date(later + 'T00:00:00') <= limit;
+}
+
+// 摘要含定价、订金、保证金的流水，核销优先级最低
+function isDeferredTxn(t) {
+  return /定价|订金|保证金/.test(t.purpose || '');
+}
+
+// 取最早的未结清发票；maxDate 为空时不限制开票日期
+function pickOpenInvoice(list, maxDate) {
+  for (var i = 0; i < list.length; i++) {
+    var inv = list[i];
+    if (inv.remain <= TOL) continue;
+    if (maxDate && inv.date && inv.date > maxDate) continue;
+    return inv;
+  }
+  return null;
+}
+
+function bindPayment(inv, txn, amount) {
+  var use = r2(Math.min(txn.remaining, amount));
+  if (use <= 0) return;
+  txn.remaining = r2(txn.remaining - use);
+  inv.paid = r2(inv.paid + use);
+  inv.remain = r2(inv.remain - use);
+  inv.matches.push({ date: txn.date, amount: use, txnKey: txn.key });
+}
+
+/* ============ 报告渲染 ============ */
+function filterSummary(f) {
+  var parts = [];
+  var shownYears = (f.years && f.years.length && f.displayYears && f.displayYears.length) ? f.displayYears : f.years;
+  var dateText = '';
+  if (f.dateStart || f.dateEnd) {
+    dateText = (f.dateStart || '不限起') + ' 至 ' + (f.dateEnd || '不限止');
+  }
+  var yearText;
+  if (dateText) {
+    yearText = dateText + (f.years && f.years.length ? '（同时限定 ' + (shownYears && shownYears.length ? shownYears.join('、') : f.years.join('、')) + ' 年）' : '');
+  } else if (!f.years || !f.years.length) {
+    yearText = '全部年份';
+  } else if (!shownYears || !shownYears.length) {
+    yearText = '全部年份';
+  } else {
+    yearText = shownYears.join('、') + ' 年' + (f.coversAllYears ? '（全部年份）' : '');
+  }
+  parts.push(yearText);
+  parts.push(f.direction === 'recv' ? '应收' : (f.direction === 'pay' ? '应付' : (f.direction === 'unmatched' ? '无对应发票往来单位' : '全部方向')));
+  if (f.settle) parts.push(f.settle === 'open' ? '未结清' : (f.settle === 'over' ? '多收/多付（超开票）' : '已结清'));
+  parts.push(f.company || '全部单位');
+  if (f.keyword) parts.push('关键词「' + f.keyword + '」');
+  return parts.join(' · ');
+}
+
+function renderReport(m) {
+  reportView = 'full';
+  var recvLabel = '应收（销售开票）';
+  var payLabel = '应付（取得发票）';
+  var f = m.filters || { years: [], direction: 'all', company: '' };
+  var title = f.company ? escapeHTML(f.company) + ' 收付款核对报告' : '收付款情况核对报告';
+  var redTotal = (m.recv.redCount || 0) + (m.pay.redCount || 0);
+  var personalTotal = (m.recv.totalPersonalCount || 0) + (m.pay.totalPersonalCount || 0);
+  var effTotal = (m.recv.invoiceCount - m.recv.redCount - (m.recv.totalPersonalCount || 0)) +
+    (m.pay.invoiceCount - m.pay.redCount - (m.pay.totalPersonalCount || 0));
+  var bankCountHTML = '参与核对的银行流水 <b>' + m.banks.length + '</b> 笔';
+  if (m.yearView) {
+    var relatedTxnKeys = new Set();
+    ['recv', 'pay'].forEach(function(side) {
+      m[side].groups.forEach(function(g) {
+        g.txns.forEach(function(t) {
+          if ((t.yearUsed || 0) > TOL) relatedTxnKeys.add(side + ':' + g.key + ':' + t.key);
+        });
+      });
+    });
+    if (m.dateRangeView) {
+      bankCountHTML = '跨期核销取数 <b>' + m.banks.length + '</b> 笔（含区间外） ｜ 本次发票核销涉及 <b>' + relatedTxnKeys.size + '</b> 笔';
+    } else {
+      bankCountHTML = '跨年核销取数 <b>' + m.banks.length + '</b> 笔（含历史） ｜ 本次发票核销涉及 <b>' + relatedTxnKeys.size + '</b> 笔';
+    }
+  }
+
+  var html = '';
+  html += '<div class="report-head">' +
+    (f.company ? '<div class="report-back no-print"><button class="link-btn" onclick="backToAllCompanies()">← 返回全部单位</button></div>' : '') +
+    '<h1>' + title + '</h1>' +
+    '<div class="report-meta">' +
+      '核对主体：<b>' + escapeHTML(m.our || '未识别') + '</b> ｜ 数据期间：<b>' + escapeHTML(m.dates) + '</b> ｜ 编制日期：<b>' + m.generatedAt.slice(0, 10) + '</b><br>' +
+      '筛选范围：<b>' + escapeHTML(filterSummary(f)) + '</b> ｜ 本次发票 <b>' + m.invoices.length + '</b> 张（参与核对 <b>' + effTotal + '</b> 张 ｜ 红冲 <b>' + redTotal + '</b> 张' +
+        (personalTotal ? ' ｜ 个人支付 <b>' + personalTotal + '</b> 张（视为结清）' : '') + '） ｜ ' + bankCountHTML +
+      (m.yearView && !m.dateRangeView ? '<br>跨年核销口径：<b>仅列示所选年份发票；完整历史发票及截至 ' + escapeHTML(m.yearEnd) + ' 的流水已参与核销，不使用以后年度流水</b>' : '') +
+      (m.accounts && m.accounts.length ? '<br>本方账号：<b class="acct">' + m.accounts.map(escapeHTML).join('、') + '</b>' : '') +
+    '</div>' +
+  '</div>';
+
+  var hasUnmatched = unmatchedGroups(m).length > 0;
+  if (!m.invoices.length && !hasUnmatched) {
+    html += '<div class="empty-report">当前筛选条件下没有对应的发票数据，请调整年份、方向、核对状态或往来单位。</div>';
+    html += notesHTML();
+    document.getElementById('report').innerHTML = html;
+    applyPrintSelections();
+    return;
+  }
+
+  // KPI：只展示有数据的方向
+  var cards = '';
+  var cardCount = 0;
+  if (m.recv.invoiceCount > 0 || m.recv.totalBank > 0) { cards += kpiCard('recv', recvLabel, m.recv); cardCount++; }
+  if (m.pay.invoiceCount > 0 || m.pay.totalBank > 0) { cards += kpiCard('pay', payLabel, m.pay); cardCount++; }
+  if (cardCount) html += '<div class="kpi-grid' + (cardCount <= 1 ? ' single' : '') + '" data-psec="kpi">' + cards + '</div>';
+
+  // 经营测算需同时包含销售与采购，避免单方向筛选造成误读
+  if (m.invoices.length && m.direction === 'all') html += '<div class="section" data-psec="operating">' + sectionOperating(m) + '</div>';
+
+  // 按往来单位核对
+  if (m.recv.groups.length) html += sectionGroup('recv', recvLabel + ' — 按往来单位核对', m.recv, f);
+  if (m.pay.groups.length) html += sectionGroup('pay', payLabel + ' — 按往来单位核对', m.pay, f);
+
+  // 单户报告：补充该单位的银行流水明细
+  if (f.company) html += sectionCompanyBanks(m);
+
+  // 发票明细
+  if (m.recv.groups.length) html += sectionDetail('recv', recvLabel + ' — 发票明细核对', m.recv);
+  if (m.pay.groups.length) html += sectionDetail('pay', payLabel + ' — 发票明细核对', m.pay);
+
+  // 无对应发票的银行流水（单户报告不展示；按核对状态筛选时另作提示）
+  if (!f.company) {
+    if (m.hideUnmatched) {
+      html += '<div class="muted" style="font-size:12px;margin:8px 2px;">按核对状态筛选时不列示无对应发票的资金往来；如需查看，请将方向切换为「无对应发票往来单位」。</div>';
+    } else {
+      html += sectionUnmatched(m);
+    }
+  }
+
+  html += notesHTML();
+  document.getElementById('report').innerHTML = html;
+  applyPrintSelections();
+}
+
+function notesHTML() {
+  return '<div class="notes' + (includeNotesInPrint ? '' : ' no-print') + '">' +
+    '<b>核对说明：</b><br>' +
+    '1. 发票按「数电发票号码 / 发票代码+号码」去重，同一张发票跨多行、跨工作表只计一次；红冲及负数发票不参与应收应付金额与核销，仅单独统计张数并在明细中列示；状态为「已作废」的发票直接排除，不构成应收应付。<br>' +
+    '2. 我方主体自动识别为两张发票中同时出现的固定一方：销方为我方计入应收，购方为我方计入应付。<br>' +
+    '3. 银行流水按「核心唯一流水号」等去重；仅将对方户名与发票往来单位一致的收支纳入核销。无对应发票的收入、支出均单独记录，按单位汇总并计算净额（收入−支出），正数为净流入、负数为净流出，不参与发票核销；每个单位可展开「查看明细」核对逐笔往来及抵消过程。对方账户导出的流水需勾选「对方流水」反转收支，往来单位取该账户名称；同一期间请勿同时导入双方流水，避免重复计算。<br>' +
+    '4. 应收（销售）：开票金额与回款金额完全一致（尾差 ±0.1 元以内）的优先一一匹配，开票日与回款日相差不超过 3 个月，取日期最接近的一张发票；其余回款按交易日期先后逐笔核销（先冲旧账）：先冲开票日期不晚于该笔回款的最早未结清发票（先票后款）；当期无票可冲时，结余作为预收按日期顺序冲抵其后最早未结清发票。不再做同月配对与 3 个月内优先，确保新到账资金优先清偿历史旧账。一笔回款可核销多张发票，一张发票可分多笔回款。摘要含「定价、订金、保证金」的流水最后参与核销：普通流水优先冲抵发票，仍有未结清发票时，票额与流水金额一致的按同额匹配，否则按日期顺序核销；未分配部分计入多收，但金额仍计入可对应银行流水。客户退款冲减已回款，先冲未分配的收款，再按发票倒序冲减已核销金额；仅有销售发票、没有采购发票的单位，其银行支出视为客户退款，双向往来单位的支出仍按采购付款处理。多收但无同户名退款流水的，需核实是否为预收款或发票未全量导出。<br>' +
+    '5. 应付（采购）：核对口径与应收（销售）完全一致，仅收付方向相反。开票金额与付款金额完全一致（尾差 ±0.1 元以内）的优先一一匹配，开票日与付款日相差不超过 3 个月，取日期最接近的一张发票；其余付款按交易日期先后逐笔核销（先冲旧账）：先冲开票日期不晚于该笔付款的最早未结清进项发票（先票后款）；当期无票可冲时，结余作为预付冲抵其后最早未结清发票。不再做同月配对与 3 个月内优先，确保新付出资金优先清偿历史旧账。一笔付款可核销多张发票，一张发票可分多笔付款。摘要含「定价、订金、保证金」的流水最后参与核销：普通流水优先冲抵发票，仍有未结清发票时，票额与流水金额一致的按同额匹配，否则按日期顺序核销；未分配部分计入多付，但金额仍计入可对应银行流水。供应商退款冲减已付款，先冲未分配的多付款，再按发票倒序冲减已核销金额。仅有采购发票、没有销售发票的单位，其银行收入视为供应商退款冲减；双向往来单位的收入仍按销售回款处理。多付但无同户名退款流水的，需核实是否为预付款、保证金或发票未全量导出。<br>' +
+    '6. 单户报告中银行流水「本方账号」为收款/付款账户，「对方账号」为交易对手账户。<br>' +
+    '7. 选择年份时，报告仅列示所选年份发票；核销仍使用完整历史发票及截至所选年份期末的全部历史流水，不使用有明确以后年度日期的流水。无交易日期的流水无法判断所属期间，为避免漏算仍参与核销。历史已结清回款不会重复冲抵所选年份发票，历史结余可继续核销；全部年份报告若包含更晚流水，其最终结清状态可能与此不同。年份筛选下的单户流水仅列与本次发票存在核销关系的流水（含跨年度），「本次发票核销」为分配到本次发票的金额，另核销其他年份的金额单独标注。退款冲减见发票明细。<br>' +
+    '8. 经营测算按当前筛选范围的含税销售开票与含税采购开票计算：进销差额＝销售开票−采购开票，资金净流量＝可对应收款−可对应付款，两者均不代表净利润。多收客户按回款超开票的未分配余额列示，少付供应商按采购发票未付款余额列示；方向需选择「全部」。<br>' +
+    '9. 应付（采购）方向中，商品名称为住宿、餐饮、餐费、伙食类（或缺少商品名称但销方为酒店、宾馆、旅馆、饭店等）的发票，视为个人支付：含税金额仍计入进项票金额，状态标记为「个人支付」并视为结清，不计入已付款，也不计入未付款，付款率按扣除该部分后的金额计算。<br>' +
+     '</div>';
+}
+
+function kpiCard(cls, label, d) {
+  var eff = d.invoiceCount - d.redCount - (d.totalPersonalCount || 0);
+  var redTip = d.redCount
+    ? ' ｜ 另有红冲 ' + d.redCount + ' 张' + (d.redAmount > TOL ? '（¥' + fmtMoney(d.redAmount) + '）' : '') + '（不计入核销）'
+    : '';
+
+  var isPay = cls === 'pay';
+  var rate = Math.max(0, Math.min(1, d.rate || 0));
+  var refundTip = d.totalRefund > TOL ? ' ｜ 已冲减退款 ¥ ' + fmtMoney(d.totalRefund) : '';
+  var personalRow = d.totalPersonal > TOL
+    ? '<div class="kpi-row"><span>个人支付（住宿/餐饮 ' + d.totalPersonalCount + ' 张）</span><b>¥ ' + fmtMoney(d.totalPersonal) + '</b></div>'
+    : '';
+  return '<div class="kpi-card ' + cls + '">' +
+    '<div class="kpi-title">' + label + '</div>' +
+    '<div class="kpi-main"><small>¥</small>' + fmtMoney(d.totalInvoice) + '</div>' +
+    '<div class="kpi-row"><span>' + (isPay ? '已付款' : '已回款') + '</span><b class="green">¥ ' + fmtMoney(d.totalPaid) + '</b></div>' +
+    personalRow +
+    '<div class="kpi-row"><span>' + (isPay ? '未付款' : '未回款') + '</span><b class="red">¥ ' + fmtMoney(d.totalUnpaid) + '</b></div>' +
+    '<div class="bar"><i style="width:' + (rate * 100).toFixed(1) + '%"></i></div>' +
+    '<div class="kpi-foot">' + (isPay ? '付款率 ' : '回款率 ') + (rate * 100).toFixed(1) + '% ｜ 参与核对 ' +
+      eff + ' 张发票' + redTip + ' ｜ 可对应银行流水 ¥ ' + fmtMoney(d.totalBank) + refundTip +
+      (d.totalPersonal > TOL ? ' ｜ 率按扣除个人支付后金额计算' : '') + '</div>' +
+  '</div>';
+}
+
+function sectionOperating(m) {
+  var sales = m.recv.totalInvoice || 0;
+  var purchases = m.pay.totalInvoice || 0;
+  var margin = r2(sales - purchases);
+  var cashNet = r2((m.recv.totalBank || 0) - (m.pay.totalBank || 0));
+  var overReceived = m.recv.groups.filter(function(g) { return g.bankLeft > TOL; })
+    .sort(function(a, b) { return b.bankLeft - a.bankLeft; });
+  var underPaid = m.pay.groups.filter(function(g) { return g.unpaid > TOL; })
+    .sort(function(a, b) { return b.unpaid - a.unpaid; });
+
+  function metric(label, value, sub, signed) {
+    var color = signed ? (value > TOL ? 'var(--green)' : value < -TOL ? 'var(--red)' : 'var(--text)') : 'var(--text)';
+    return '<div class="um-item"><div class="um-label">' + label + '</div>' +
+      '<div class="um-value" style="color:' + color + ';">¥' + fmtMoney(value) + '</div>' +
+      '<div class="um-sub">' + sub + '</div></div>';
+  }
+
+  function balanceTable(title, list, kind) {
+    var isOver = kind === 'over';
+    var rows = list.map(function(g) {
+      var diff = isOver ? g.bankLeft : g.unpaid;
+      return '<tr><td class="left">' + escapeHTML(g.name) + '</td>' +
+        '<td>' + fmtMoney(g.invoiceAmount) + '</td>' +
+        '<td>' + fmtMoney(g.paid) + '</td>' +
+        '<td><b class="' + (isOver ? 'green' : 'red') + '">' + fmtMoney(diff) + '</b></td></tr>';
+    }).join('');
+    var total = r2(list.reduce(function(sum, g) { return sum + (isOver ? g.bankLeft : g.unpaid); }, 0));
+    if (!rows) rows = '<tr><td colspan="4" class="muted" style="padding:12px 0;">' + (isOver ? '暂无多收客户' : '暂无少付供应商') + '</td></tr>';
+    else rows += '<tr style="font-weight:600;background:var(--bg-soft);"><td class="left">合计</td><td>—</td><td>—</td><td>' + fmtMoney(total) + '</td></tr>';
+    return '<div class="section-title" style="font-size:13px;margin-top:14px;">' + title +
+      '<span class="sub">' + list.length + ' 个单位 ｜ 合计 ¥' + fmtMoney(total) + '</span></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>' + (isOver ? '客户' : '供应商') + '</th>' +
+      '<th>' + (isOver ? '含税销售开票' : '含税采购开票') + '</th>' +
+      '<th>' + (isOver ? '已核销回款' : '已核销付款') + '</th>' +
+      '<th>' + (isOver ? '多收金额（超开票）' : '少付金额（未付款）') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  return '<div class="section-title">经营测算（含税进销口径）<span class="sub">按当前筛选范围汇总</span></div>' +
+    '<div class="um-summary">' +
+      metric('含税销售开票', sales, m.recv.invoiceCount + ' 张销售发票', false) +
+      metric('含税采购开票', purchases, m.pay.invoiceCount + ' 张采购发票', false) +
+      metric('进销差额（估算）', margin, '销售开票 − 采购开票', true) +
+      metric('资金净流量', cashNet, '可对应收款 − 可对应付款', true) +
+    '</div>' +
+    '<div class="muted" style="font-size:12px;margin:8px 2px 4px;">进销差额仅为含税发票口径的粗略测算，不是净利润；资金净流量也不代表利润。多收、少付按核销后的实际差额列示。</div>' +
+    balanceTable('多收客户（回款超开票）', overReceived, 'over') +
+    balanceTable('少付供应商（尚未付清）', underPaid, 'under');
+}
+
+function statusTag(status) {
+  if (status === 'done') return '<span class="tag done">已结清</span>';
+  if (status === 'partial') return '<span class="tag partial">部分</span>';
+  if (status === 'red') return '<span class="tag red">红冲</span>';
+  if (status === 'personal') return '<span class="tag personal">个人支付</span>';
+  return '<span class="tag open">未结清</span>';
+}
+
+function sectionGroup(side, title, d, flt) {
+  var isRecv = side === 'recv';
+  var currentKey = flt && flt.company ? normName(flt.company) : '';
+
+  var rows = d.groups.map(function(g, idx) {
+    var isCurrent = currentKey && g.key === currentKey;
+    var action = isCurrent
+      ? ''
+      : '<span class="no-print"><br><button class="link-btn" onclick="companyReport(\'' + side + '\',' + idx + ')">查看单户报告</button></span>';
+    var nameCell = '<td class="left">' + escapeHTML(g.name) + action + '</td>';
+    var rate = g.payable > 0 ? (g.paid / g.payable * 100) : (g.paid > TOL ? 100 : 0);
+    var extra = g.bankLeft > TOL
+      ? '<div class="muted" style="font-size:11px;margin-top:2px;">' + (isRecv ? '回款超开票' : '付款超开票') + ' ¥' + fmtMoney(g.bankLeft) + '</div>'
+      : '';
+    if (g.personalAmount > TOL) {
+      extra += '<div class="muted" style="font-size:11px;margin-top:2px;">个人支付 ¥' + fmtMoney(g.personalAmount) + '（' + g.personalCount + ' 张，视为结清）</div>';
+    }
+    if (g.refundTotal > TOL) {
+      extra += '<div class="muted" style="font-size:11px;margin-top:2px;">' + (isRecv ? '客户退款冲减' : '供应商退款冲减') + ' ¥' + fmtMoney(g.refundTotal) + '</div>';
+    }
+    return '<tr' + (isCurrent ? ' class="current-row"' : '') + '>' +
+      nameCell +
+      '<td>' + g.invoices.length + (g.personalCount ? '<div class="muted" style="font-size:11px;">个人支付 ' + g.personalCount + '</div>' : '') + '</td>' +
+      '<td>' + (g.redCount
+        ? g.redCount + (Math.abs(g.redAmount || 0) > TOL ? '<div class="muted" style="font-size:11px;">¥' + fmtMoney(Math.abs(g.redAmount)) + '</div>' : '')
+        : '<span class="muted">—</span>') + '</td>' +
+      '<td class="num">' + fmtMoney(g.invoiceAmount) + '</td>' +
+      '<td class="num">' + fmtMoney(g.bankAmount) + '</td>' +
+      '<td class="num">' + fmtMoney(g.paid) + '</td>' +
+      '<td class="num" style="color:' + (g.unpaid > TOL ? '#dc2626' : '#15803d') + ';">' + fmtMoney(g.unpaid) + '</td>' +
+      '<td>' + rate.toFixed(1) + '%</td>' +
+      '<td>' + statusTag(g.status) + extra + '</td>' +
+    '</tr>';
+  }).join('');
+
+  if (!rows) rows = '<tr><td colspan="9" class="muted" style="padding:18px 0;">暂无数据</td></tr>';
+  return '<div class="section" data-psec="' + side + 'Group">' +
+    '<div class="section-title ' + (isRecv ? '' : 'pay') + '">' + title +
+      '<span class="sub">共 ' + d.groups.length + ' 个单位</span></div>' +
+    '<div class="table-wrap"><table class="rpt">' +
+      '<thead><tr><th>往来单位</th><th>参与核对<br>发票张数</th><th>红冲<br>张数</th><th>' + (isRecv ? '开票金额' : '进项票金额') + '</th><th>对应银行流水</th><th>' + (isRecv ? '已回款' : '已付款') + '</th><th>' + (isRecv ? '未回款' : '未付款') + '</th><th>' + (isRecv ? '回款率' : '付款率') + '</th><th>状态</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+      '<tfoot><tr><td class="left">合计</td><td>' + (d.effectiveCount - (d.totalPersonalCount || 0)) + '</td><td>' + d.redCount + '</td><td class="num">' + fmtMoney(d.totalInvoice) + '</td><td class="num">' + fmtMoney(d.totalBank) + '</td><td class="num">' + fmtMoney(d.totalPaid) + '</td><td class="num">' + fmtMoney(d.totalUnpaid) + '</td><td>' + (d.rate * 100).toFixed(1) + '%</td><td></td></tr></tfoot>' +
+    '</table></div>' +
+  '</div>';
+}
+
+function sectionCompanyBanks(m) {
+  var defs = [
+    { side: 'recv', label: '收款流水（收入 / 客户退款）', d: m.recv, cls: '' },
+    { side: 'pay', label: '付款流水（支出 / 供应商退款）', d: m.pay, cls: 'pay' }
+  ];
+  var blocks = '';
+  var allocationView = !!m.yearView;
+
+  defs.forEach(function(def) {
+    if (!def.d.groups.length) return;
+    var flow = [], refundCount = 0;
+    def.d.groups.forEach(function(g) {
+      g.txns.forEach(function(t) {
+        if (allocationView && (t.yearUsed || 0) <= TOL) return;
+        flow.push({ type: 'txn', t: t });
+      });
+      if (!allocationView) (g.refunds || []).forEach(function(r) { flow.push({ type: 'refund', t: r }); refundCount++; });
+    });
+    flow.sort(function(a, b) { return (a.t.date || '') < (b.t.date || '') ? 1 : -1; });
+
+    var refundName = def.side === 'recv' ? '客户退款' : '供应商退款';
+    var rows = flow.map(function(item) {
+      var t = item.t;
+      var cpAcct = t.cpAccount
+        ? '<span class="acct">' + escapeHTML(t.cpAccount) + '</span>' + (t.cpBank ? '<div class="muted" style="font-size:10.5px;">' + escapeHTML(t.cpBank) + '</div>' : '')
+        : '<span class="muted">—</span>';
+      var isRefund = item.type === 'refund';
+      var purpose = isRefund
+        ? '<span class="tag red">' + refundName + '</span> ' + escapeHTML(t.purpose || '')
+        : escapeHTML(t.purpose || '—');
+      var tail;
+      if (isRefund) {
+        tail = '<td class="num"><span class="muted">—</span></td><td class="num"><span class="muted">—</span></td>';
+      } else if (allocationView) {
+        var otherMatched = r2((t.matchedTotal || 0) - (t.yearUsed || 0));
+        tail = '<td class="num">' + fmtMoney(t.yearUsed || 0) +
+            (otherMatched > TOL ? '<div class="muted" style="font-size:10.5px;">另核销其他年份 ¥' + fmtMoney(otherMatched) + '</div>' : '') +
+            (t.refundCut > TOL ? '<div class="muted" style="font-size:10.5px;">退款冲减 ¥' + fmtMoney(t.refundCut) + '</div>' : '') +
+          '</td><td class="num">' + fmtMoney(t.remaining || 0) + '</td>';
+      } else {
+        tail = '<td class="num">' + fmtMoney(t.used || 0) +
+            (t.refundCut > TOL ? '<div class="muted" style="font-size:10.5px;">退款冲减 ¥' + fmtMoney(t.refundCut) + '</div>' : '') +
+          '</td><td class="num">' + fmtMoney(t.remaining || 0) + '</td>';
+      }
+      return '<tr>' +
+        '<td>' + escapeHTML(t.date || '—') + '</td>' +
+        '<td class="acct">' + escapeHTML(t.account || '—') + '</td>' +
+        '<td>' + cpAcct + '</td>' +
+        '<td class="left muted">' + purpose + '</td>' +
+        '<td class="num"' + (isRefund ? ' style="color:#dc2626;"' : '') + '>' + (isRefund ? '−' : '') + fmtMoney(t.amount) + '</td>' +
+        tail +
+      '</tr>';
+    }).join('');
+
+    var colspan = 7;
+    if (!rows) rows = '<tr><td colspan="' + colspan + '" class="muted" style="padding:14px 0;">' + (allocationView ? '本次年份发票暂无核销流水' : '该方向暂无银行流水') + '</td></tr>';
+    var head = '<th>交易日期</th><th>本方账号</th><th>对方账号</th><th>摘要 / 用途</th><th>交易金额</th>' +
+      (allocationView ? '<th>本次发票核销</th><th>未核销余额</th>' : '<th>已核销</th><th>未核销</th>');
+    var flowLabel = allocationView
+      ? (def.side === 'recv' ? '收款流水（本次发票核销）' : '付款流水（本次发票核销）')
+      : def.label;
+
+    blocks += '<div style="margin-top:10px;">' +
+      '<div class="section-title ' + def.cls + '" style="font-size:13px;">' + flowLabel +
+        '<span class="sub">共 ' + (flow.length - refundCount) + ' 笔' + (refundCount ? ' ｜ 退款 ' + refundCount + ' 笔（已冲减）' : '') +
+        (allocationView ? ' ｜ 含核销本次发票的跨年度流水；退款冲减见发票明细' : '') + '</span></div>' +
+      '<div class="table-wrap"><table class="rpt">' +
+        '<thead><tr>' + head + '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table></div>' +
+    '</div>';
+  });
+
+  if (!blocks) blocks = '<div class="empty-report" style="padding:24px 0;">该单位暂无银行流水记录</div>';
+
+  return '<div class="section" data-psec="companyBanks">' +
+    '<div class="section-title">单户银行流水明细<span class="sub">' + escapeHTML(m.filters.company) + '</span></div>' +
+    blocks +
+  '</div>';
+}
+
+function sectionDetail(side, title, d) {
+  var all = [];
+  d.groups.forEach(function(g) {
+    g.invoices.forEach(function(inv) { all.push(inv); });
+    g.redInvoices.forEach(function(inv) { all.push(inv); });
+  });
+  all.sort(function(a, b) { return (a.date || '') < (b.date || '') ? 1 : -1; });
+
+  var rows = all.map(function(inv) {
+    var matches = '';
+    if (inv.matchStatus === 'red') {
+      matches = '<span class="muted">红冲 / 负数发票，不参与核销</span>';
+    } else if (inv.personal) {
+      matches = '<span class="muted">住宿/餐饮类，个人支付，视为结清（不计公司付款、不计未付款）</span>' +
+        (inv.goods ? '<div class="muted" style="font-size:11px;">' + escapeHTML(inv.goods) + '</div>' : '');
+    } else if (inv.matches.length) {
+      matches = '<div class="match-list">' + inv.matches.slice(0, 4).map(function(x) {
+        // 流水早于开票且超过 3 个月，属于预收/预付余额冲抵，标注为余额冲抵并附原始预付日期
+        if (x.date && inv.date && x.date < inv.date && !withinMonths(x.date, inv.date, 3)) {
+          return (side === 'recv' ? '预收余额冲抵 ' : '预付余额冲抵 ') + '¥' + fmtMoney(x.amount) +
+            '<span class="muted" style="font-size:10.5px;">（' + escapeHTML(x.date) + (side === 'recv' ? ' 预收' : ' 预付') + '）</span>';
+        }
+        return (side === 'recv' ? '收款 ' : '付款 ') + escapeHTML(x.date || '—') + ' ¥' + fmtMoney(x.amount);
+      }).join('<br>') + (inv.matches.length > 4 ? '<br>… 共 ' + inv.matches.length + ' 笔' : '') + '</div>';
+    } else {
+      matches = '<span class="muted">—</span>';
+    }
+    if (inv.refundCut > 0) {
+      matches += '<div class="match-list" style="color:#dc2626;">' + (side === 'recv' ? '客户退款冲减' : '供应商退款冲减') + ' ¥' + fmtMoney(inv.refundCut) + '</div>';
+    }
+    return '<tr data-status="' + inv.matchStatus + '">' +
+      '<td>' + escapeHTML(inv.date || '—') + '</td>' +
+      '<td>' + escapeHTML(inv.no) + '</td>' +
+      '<td class="left">' + escapeHTML(side === 'recv' ? inv.buyer : inv.seller) + '</td>' +
+      '<td class="num">' + fmtMoney(inv.amount) + '</td>' +
+      '<td class="num">' + fmtMoney(inv.paid || 0) + '</td>' +
+      '<td class="num">' + fmtMoney(inv.matchStatus === 'red' ? 0 : (inv.remain || 0)) + '</td>' +
+      '<td>' + statusTag(inv.matchStatus) + '</td>' +
+      '<td>' + matches + '</td>' +
+    '</tr>';
+  }).join('');
+
+  if (!rows) rows = '<tr><td colspan="8" class="muted" style="padding:18px 0;">暂无数据</td></tr>';
+  var selectId = 'filter_' + side;
+
+  var redCount = all.filter(function(inv) { return inv.matchStatus === 'red'; }).length;
+  var personalCount = all.filter(function(inv) { return inv.personal; }).length;
+  return '<div class="section" data-psec="' + side + 'Detail">' +
+    '<div class="section-title ' + (side === 'recv' ? '' : 'pay') + '">' + title +
+      '<span class="sub">参与核对 ' + (all.length - redCount - personalCount) + ' 张' +
+        (personalCount ? ' ｜ 个人支付 ' + personalCount + ' 张（视为结清）' : '') +
+        (redCount ? ' ｜ 红冲 ' + redCount + ' 张（不计入）' : '') + '</span></div>' +
+    '<div class="detail-tools">' +
+      '<label>显示：</label>' +
+      '<select id="' + selectId + '" onchange="filterDetail(\'' + side + '\', this.value)">' +
+        '<option value="all">全部</option>' +
+        '<option value="open">未结清</option>' +
+        '<option value="partial">部分核销</option>' +
+        '<option value="done">已结清</option>' +
+        (side === 'pay' ? '<option value="personal">个人支付</option>' : '') +
+        '<option value="red">红冲</option>' +
+      '</select>' +
+    '</div>' +
+    '<div class="table-wrap"><table class="rpt" id="detail_' + side + '">' +
+      '<thead><tr><th>开票日期</th><th>发票号码</th><th>往来单位</th><th>含税金额</th><th>已核销</th><th>未核销</th><th>状态</th><th>核销记录</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table></div>' +
+  '</div>';
+}
+
+function filterDetail(side, value) {
+  var table = document.getElementById('detail_' + side);
+  if (!table) return;
+  var rows = table.querySelectorAll('tbody tr');
+  for (var i = 0; i < rows.length; i++) {
+    var st = rows[i].getAttribute('data-status');
+    rows[i].style.display = (value === 'all' || st === value) ? '' : 'none';
+  }
+}
+
+// 无票流水按单位合并：收入、支出、净额（收入−支出）及逐笔明细
+function unmatchedGroups(m) {
+  var map = new Map();
+  function merge(list, dir) {
+    list.forEach(function(o) {
+      var k = normName(o.name);
+      if (!map.has(k)) {
+        map.set(k, { name: o.name, cpAccounts: [], txns: [], inCount: 0, inAmount: 0, outCount: 0, outAmount: 0, purpose: '' });
+      }
+      var r = map.get(k);
+      if (dir === 'in') { r.inCount += o.count; r.inAmount = r2(r.inAmount + o.amount); }
+      else { r.outCount += o.count; r.outAmount = r2(r.outAmount + o.amount); }
+      (o.txns || []).forEach(function(t) {
+        r.txns.push({ dir: dir, date: t.date, amount: t.amount, purpose: t.purpose, account: t.account, cpAccount: t.cpAccount, cpBank: t.cpBank });
+      });
+      if (!r.purpose && o.purpose) r.purpose = o.purpose;
+      (o.cpAccounts || []).forEach(function(a) { if (r.cpAccounts.indexOf(a) === -1) r.cpAccounts.push(a); });
+    });
+  }
+  merge(m.recv.unmatchedBank, 'in');
+  merge(m.pay.unmatchedBank, 'out');
+
+  return Array.from(map.values()).sort(function(a, b) {
+    return Math.abs(r2(b.inAmount - b.outAmount)) - Math.abs(r2(a.inAmount - a.outAmount));
+  });
+}
+
+// 无票流水表格：expandAll=明细全部展开；single=单户视图（不再显示单户报告按钮）
+function unmatchedTableHTML(list, expandAll, single) {
+  function amountCell(amount, count) {
+    if (!count) return '<td class="num"><span class="muted">—</span></td>';
+    return '<td class="num">' + fmtMoney(amount) + '<div class="muted" style="font-size:11px;">' + count + ' 笔</div></td>';
+  }
+
+  var rows = list.map(function(r, idx) {
+    var net = r2(r.inAmount - r.outAmount);
+    var accts = r.cpAccounts.length
+      ? r.cpAccounts.map(escapeHTML).join('<br>')
+      : '<span class="muted">—</span>';
+    var actions = '<span class="no-print"><br><button class="link-btn" onclick="toggleUnmatchedDetail(' + idx + ', this)">' + (expandAll ? '收起明细' : '查看明细') + '</button>' +
+      (single ? '' : ' <button class="link-btn" onclick="unmatchedCompanyReport(' + idx + ')">单户报告</button>') + '</span>';
+    var summary = '<tr>' +
+      '<td class="left">' + escapeHTML(r.name) + actions + '</td>' +
+      '<td class="acct" style="white-space:normal;">' + accts + '</td>' +
+      amountCell(r.inAmount, r.inCount) +
+      amountCell(r.outAmount, r.outCount) +
+      '<td class="num" style="color:' + (net > TOL ? '#15803d' : (net < -TOL ? '#dc2626' : '#6b7280')) + ';">' + fmtMoney(net) + '</td>' +
+      '<td class="left muted">' + escapeHTML(r.purpose || '—') + '</td>' +
+    '</tr>';
+
+    // 逐笔明细：按日期升序，支出以负数列示，末尾给出收入−支出=净额的抵消过程
+    var detailRows = r.txns.slice().sort(byDateAsc).map(function(t) {
+      var isIn = t.dir === 'in';
+      return '<tr>' +
+        '<td>' + escapeHTML(t.date || '—') + '</td>' +
+        '<td>' + (isIn ? '收入' : '支出') + '</td>' +
+        '<td class="num" style="color:' + (isIn ? '#15803d' : '#dc2626') + ';">' + (isIn ? '' : '−') + fmtMoney(t.amount) + '</td>' +
+        '<td class="acct">' + escapeHTML(t.account || '—') + '</td>' +
+        '<td class="acct">' + escapeHTML(t.cpAccount || '—') + (t.cpBank ? '<div class="muted" style="font-size:10.5px;">' + escapeHTML(t.cpBank) + '</div>' : '') + '</td>' +
+        '<td class="left muted">' + escapeHTML(t.purpose || '—') + '</td>' +
+      '</tr>';
+    }).join('');
+    var detail = '<tr id="umd_' + idx + '" style="display:' + (expandAll ? '' : 'none') + ';"><td colspan="6" style="background:#fafafa;">' +
+      '<div style="padding:6px 4px;">' +
+        '<table class="rpt" style="font-size:12px;">' +
+          '<thead><tr><th>交易日期</th><th>方向</th><th>金额</th><th>本方账号</th><th>对方账号</th><th>摘要 / 用途</th></tr></thead>' +
+          '<tbody>' + detailRows + '</tbody>' +
+        '</table>' +
+        '<div class="muted" style="font-size:12px;margin-top:4px;">收入 ¥' + fmtMoney(r.inAmount) + '（' + r.inCount + ' 笔） − 支出 ¥' + fmtMoney(r.outAmount) + '（' + r.outCount + ' 笔） ＝ 净额 ¥' + fmtMoney(net) + '</div>' +
+      '</div></td></tr>';
+    return summary + detail;
+  });
+
+  var totalIn = r2(list.reduce(function(s, r) { return s + r.inAmount; }, 0));
+  var totalOut = r2(list.reduce(function(s, r) { return s + r.outAmount; }, 0));
+  var totalInCount = list.reduce(function(s, r) { return s + r.inCount; }, 0);
+  var totalOutCount = list.reduce(function(s, r) { return s + r.outCount; }, 0);
+  var totalNet = r2(totalIn - totalOut);
+  var body = rows.length ? rows.join('') : '<tr><td colspan="6" class="muted" style="padding:18px 0;">全部银行流水均已找到对应发票往来单位</td></tr>';
+  var foot = rows.length
+    ? '<tfoot><tr><td class="left">合计</td><td></td><td class="num">' + fmtMoney(totalIn) + '</td><td class="num">' + fmtMoney(totalOut) + '</td>' +
+      '<td class="num" style="color:' + (totalNet > TOL ? '#15803d' : (totalNet < -TOL ? '#dc2626' : '#6b7280')) + ';">' + fmtMoney(totalNet) + '</td><td></td></tr></tfoot>'
+    : '';
+
+  return {
+    html: '<div class="table-wrap"><table class="rpt">' +
+      '<thead><tr><th>对方户名</th><th>对方账号</th><th>无票收入</th><th>无票支出</th><th>净额<br>（收入−支出）</th><th>摘要 / 用途示例</th></tr></thead>' +
+      '<tbody>' + body + '</tbody>' + foot +
+    '</table></div>',
+    totalIn: totalIn,
+    totalOut: totalOut,
+    totalNet: totalNet,
+    totalInCount: totalInCount,
+    totalOutCount: totalOutCount,
+    empty: !rows.length
+  };
+}
+
+// 无票资金往来汇总条：突出收入、支出、净额及笔数
+function unmatchedSummaryHTML(t, note) {
+  var netCls = t.totalNet > TOL ? 'net-pos' : (t.totalNet < -TOL ? 'net-neg' : '');
+  return '<div class="um-summary">' +
+    '<div class="um-sum-item"><span class="um-sum-label">无票收入</span>' +
+      '<b class="um-sum-value in">¥ ' + fmtMoney(t.totalIn) + '</b>' +
+      '<span class="um-sum-sub">' + t.totalInCount + ' 笔</span></div>' +
+    '<div class="um-sum-divider"></div>' +
+    '<div class="um-sum-item"><span class="um-sum-label">无票支出</span>' +
+      '<b class="um-sum-value out">¥ ' + fmtMoney(t.totalOut) + '</b>' +
+      '<span class="um-sum-sub">' + t.totalOutCount + ' 笔</span></div>' +
+    '<div class="um-sum-divider"></div>' +
+    '<div class="um-sum-item"><span class="um-sum-label">净额（收入−支出）</span>' +
+      '<b class="um-sum-value ' + netCls + '">¥ ' + fmtMoney(t.totalNet) + '</b></div>' +
+    (note ? '<span class="um-sum-note">' + escapeHTML(note) + '</span>' : '') +
+  '</div>';
+}
+
+function sectionUnmatched(m, standalone) {
+  var list = unmatchedGroups(m);
+  // 明细默认收起，点击「查看明细」再展开（含无票独立报告）
+  var t = unmatchedTableHTML(list, false, false);
+  var action = (!standalone && !t.empty)
+    ? '<span class="no-print" style="margin-left:10px;"><button class="link-btn" onclick="unmatchedReport()">单独生成报告</button></span>'
+    : '';
+  // 完整报告中受「打印无票资金往来」开关控制；无票独立报告本身即该内容，不受控
+  var cls = standalone
+    ? 'section'
+    : 'section unmatched-print' + (includeUnmatchedInPrint ? '' : ' no-print');
+  return '<div class="' + cls + '">' +
+    '<div class="section-title">银行流水 — 无对应发票往来单位' + action + '</div>' +
+    unmatchedSummaryHTML(t, '不参与发票核销') +
+    t.html +
+  '</div>';
+}
+
+// 无票流水：展开 / 收起某单位的逐笔明细
+function toggleUnmatchedDetail(idx, btn) {
+  var row = document.getElementById('umd_' + idx);
+  if (!row) return;
+  var show = row.style.display === 'none';
+  row.style.display = show ? '' : 'none';
+  if (btn) btn.textContent = show ? '收起明细' : '查看明细';
+}
+
+// 无票流水独立报告：仅展示无对应发票的资金往来，明细全部展开，便于单独打印
+function unmatchedReport() {
+  if (!model) { showToast('请先生成核对报告', 'error'); return; }
+  var m = model;
+  var f = m.filters || { years: [], direction: 'all', company: '' };
+  reportView = 'unmatched';
+  // 通过方向筛选进入时，本报告即为主报告，不再显示返回按钮
+  var back = (f.direction === 'unmatched') ? '' :
+    '<div class="report-back no-print"><button class="link-btn" onclick="backToFullReport()">← 返回收付款核对报告</button></div>';
+  var html = '<div class="report-head">' + back +
+    '<h1>无对应发票资金往来报告</h1>' +
+    '<div class="report-meta">' +
+      '核对主体：<b>' + escapeHTML(m.our || '未识别') + '</b> ｜ 数据期间：<b>' + escapeHTML(m.dates) + '</b> ｜ 编制日期：<b>' + m.generatedAt.slice(0, 10) + '</b><br>' +
+      '筛选范围：<b>' + escapeHTML(filterSummary(f)) + '</b> ｜ 以下均为对方户名与发票往来单位不一致的资金流水，不参与发票核销' +
+    '</div>' +
+  '</div>';
+  html += sectionUnmatched(m, true);
+  html += notesHTML();
+  document.getElementById('report').innerHTML = html;
+  document.getElementById('report').style.display = '';
+  setupSectionCollapse();
+  markScrollableTables();
+  var rep = document.getElementById('report');
+  if (rep.scrollIntoView) rep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function backToFullReport() {
+  if (model) renderReport(model);
+}
+
+// 无票单位单户报告：与有票单位一致，展示该单位全部资金往来及抵消明细
+function unmatchedCompanyReport(idx) {
+  if (!model) { showToast('请先生成核对报告', 'error'); return; }
+  var r = unmatchedGroups(model)[idx];
+  if (!r) return;
+  unmatchedReturnView = reportView === 'unmatched' ? 'unmatched' : 'full';
+  unmatchedCompanyName = r.name;
+  reportView = 'unmatchedCompany';
+  var t = unmatchedTableHTML([r], true, true);
+  var html = '<div class="report-head">' +
+    '<div class="report-back no-print"><button class="link-btn" onclick="backFromUnmatchedCompany()">← 返回上级报告</button></div>' +
+    '<h1>' + escapeHTML(r.name) + ' 无对应发票资金往来报告</h1>' +
+    '<div class="report-meta">' +
+      '核对主体：<b>' + escapeHTML(model.our || '未识别') + '</b> ｜ 数据期间：<b>' + escapeHTML(model.dates) + '</b> ｜ 编制日期：<b>' + model.generatedAt.slice(0, 10) + '</b><br>' +
+      '对方账号：<b class="acct">' + (r.cpAccounts.length ? r.cpAccounts.map(escapeHTML).join('、') : '—') + '</b> ｜ 该单位资金流水与发票往来单位不一致，不参与发票核销' +
+    '</div>' +
+  '</div>';
+  html += '<div class="section">' +
+    '<div class="section-title">资金往来明细</div>' +
+    unmatchedSummaryHTML(t, '不参与发票核销') +
+    t.html +
+  '</div>';
+  html += notesHTML();
+  document.getElementById('report').innerHTML = html;
+  document.getElementById('report').style.display = '';
+  setupSectionCollapse();
+  markScrollableTables();
+  var rep = document.getElementById('report');
+  if (rep.scrollIntoView) rep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function backFromUnmatchedCompany() {
+  if (unmatchedReturnView === 'unmatched') unmatchedReport();
+  else backToFullReport();
+}
+
+/* ============ 打印 ============ */
+// 各区域的打印开关：仅影响打印，屏幕浏览始终显示
+var printSections = {
+  kpi: true,
+  operating: true,
+  recvGroup: true,
+  payGroup: true,
+  companyBanks: true,
+  recvDetail: true,
+  payDetail: true
+};
+
+function toggleSectionPrint(key, checked) {
+  printSections[key] = !!checked;
+  applyPrintSelections();
+}
+
+function applyPrintSelections() {
+  var list = document.querySelectorAll('#report [data-psec]');
+  for (var i = 0; i < list.length; i++) {
+    var key = list[i].getAttribute('data-psec');
+    list[i].classList.toggle('no-print', printSections[key] === false);
+  }
+  setupSectionCollapse();
+  markScrollableTables();
+}
+
+// 报告各板块折叠：标题行点击收起/展开，KPI 汇总补一个标题行
+function setupSectionCollapse() {
+  var report = document.getElementById('report');
+  if (!report || report.querySelector('.fold-title')) return;
+  var kpi = report.querySelector('.kpi-grid[data-psec="kpi"]');
+  if (kpi) {
+    var kh = document.createElement('div');
+    kh.className = 'section-title fold-title';
+    kh.setAttribute('data-psec', 'kpi');
+    kh.innerHTML = '汇总卡片<span class="sub">应收 / 应付</span>';
+    kpi.parentNode.insertBefore(kh, kpi);
+    bindFold(kh, kpi);
+  }
+  var secs = report.querySelectorAll(':scope > .section');
+  for (var i = 0; i < secs.length; i++) {
+    var t = secs[i].querySelector('.section-title');
+    if (!t || t.classList.contains('fold-head')) continue;
+    t.classList.add('fold-head');
+    bindFold(t, secs[i]);
+  }
+}
+
+function bindFold(trigger, target) {
+  trigger.setAttribute('role', 'button');
+  trigger.setAttribute('tabindex', '0');
+  trigger.setAttribute('aria-expanded', 'true');
+  trigger.addEventListener('click', function() { toggleFold(trigger, target); });
+  trigger.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleFold(trigger, target);
+    }
+  });
+}
+
+function toggleFold(trigger, target) {
+  var folded = target.classList.toggle('is-folded');
+  trigger.classList.toggle('is-folded', folded);
+  trigger.setAttribute('aria-expanded', folded ? 'false' : 'true');
+  if (!folded) markScrollableTables();
+}
+
+// 窄屏表格超出可视宽度时，补一行“可左右滑动”提示
+function markScrollableTables() {
+  var wraps = document.querySelectorAll('#report .table-wrap');
+  for (var i = 0; i < wraps.length; i++) {
+    var w = wraps[i];
+    var next = w.nextElementSibling;
+    if (next && next.classList && next.classList.contains('scroll-hint')) {
+      next.parentNode.removeChild(next);
+    }
+    if (!w.offsetParent) continue;
+    if (w.scrollWidth > w.clientWidth + 2) {
+      var h = document.createElement('div');
+      h.className = 'scroll-hint no-print';
+      h.textContent = '左右滑动查看完整表格';
+      w.parentNode.insertBefore(h, w.nextSibling);
+    }
+  }
+}
+
+var scrollHintTimer = null;
+window.addEventListener('resize', function() {
+  if (scrollHintTimer) clearTimeout(scrollHintTimer);
+  scrollHintTimer = setTimeout(markScrollableTables, 150);
+});
+
+// 勾选/取消「打印核对说明」：仅影响打印，屏幕浏览始终显示
+function togglePrintNotes(checked) {
+  includeNotesInPrint = !!checked;
+  var notes = document.querySelector('#report .notes');
+  if (notes) notes.classList.toggle('no-print', !includeNotesInPrint);
+}
+
+// 勾选/取消「打印无票资金往来」：仅影响打印，屏幕浏览始终显示
+function toggleUnmatchedPrint(checked) {
+  includeUnmatchedInPrint = !!checked;
+  var list = document.querySelectorAll('#report .unmatched-print');
+  for (var i = 0; i < list.length; i++) {
+    list[i].classList.toggle('no-print', !includeUnmatchedInPrint);
+  }
+}
+
+// 打印前展开所有折叠板块，避免打印内容缺失
+window.addEventListener('beforeprint', function() {
+  var els = document.querySelectorAll('#report .is-folded');
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('is-folded');
+  }
+});
+
+function printReport() {
+  if (!model) { showToast('请先生成核对报告', 'error'); return; }
+  applyPrintSelections();
+  var name;
+  if (reportView === 'unmatched') name = '无对应发票资金往来报告';
+  else if (reportView === 'unmatchedCompany') name = unmatchedCompanyName + '无对应发票资金往来报告';
+  else name = model.filters && model.filters.company
+    ? model.filters.company + '收付款核对报告'
+    : '收付款情况核对报告';
+  printWithTitle(name);
+}
+</script>
+</body>
+</html>
