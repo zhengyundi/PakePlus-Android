@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -3582,13 +3582,32 @@ function buildPDF(name, done) {
   var src = document.getElementById('report');
   if (!src) { done(false, '报告尚未生成'); return; }
 
-  // 离屏容器固定 900px 宽，避免手机窄屏把表格压得过窄
+  // 离屏容器按固定宽度渲染，避免手机窄屏把表格压扁或截断
+  var PDF_W = 900;
+  var prevOverflow = document.documentElement.style.overflowX;
+  document.documentElement.style.overflowX = 'hidden';
   var holder = document.createElement('div');
-  holder.style.cssText = 'position:fixed;left:-12000px;top:0;width:900px;background:#fff;z-index:-1;';
+  holder.className = 'pdf-holder';
+  holder.style.cssText = 'position:absolute;left:0;top:0;width:' + PDF_W + 'px;background:#ffffff;z-index:-1;';
+  var holderStyle = document.createElement('style');
+  holderStyle.textContent =
+    '.pdf-holder .table-wrap{overflow:visible !important;margin-top:0 !important;}' +
+    '.pdf-holder table{width:100% !important;min-width:0 !important;}' +
+    '.pdf-holder td,.pdf-holder th{white-space:normal !important;word-break:break-word;}' +
+    // PDF 专用紧凑排版，减少分页与空白
+    '.pdf-holder .report-head{padding-bottom:10px !important;}' +
+    '.pdf-holder .report-head h1{font-size:20px !important;margin-bottom:6px !important;}' +
+    '.pdf-holder .section{margin-top:12px !important;}' +
+    '.pdf-holder .pdf-seg{margin-top:0 !important;}' +
+    '.pdf-holder .section-title{padding:8px 12px !important;font-size:14px !important;}' +
+    '.pdf-holder .kpi-grid{gap:10px !important;}' +
+    '.pdf-holder .kpi-card{padding:10px 12px !important;}' +
+    '.pdf-holder table.rpt th,.pdf-holder table.rpt td{padding:5px 7px !important;font-size:11px !important;line-height:1.35 !important;}';
+  holder.appendChild(holderStyle);
   var clone = src.cloneNode(true);
   clone.removeAttribute('id');
   clone.style.display = 'block';
-  clone.style.width = '900px';
+  clone.style.width = PDF_W + 'px';
   clone.style.margin = '0';
   clone.style.boxShadow = 'none';
   clone.style.borderRadius = '0';
@@ -3599,12 +3618,17 @@ function buildPDF(name, done) {
   holder.appendChild(clone);
   document.body.appendChild(holder);
 
+  function cleanup() {
+    if (holder.parentNode) holder.parentNode.removeChild(holder);
+    document.documentElement.style.overflowX = prevOverflow;
+  }
+
   var blocks = [];
   for (var k = 0; k < clone.children.length; k++) {
     if (clone.children[k].offsetHeight > 4) blocks.push(clone.children[k]);
   }
   if (!blocks.length) {
-    document.body.removeChild(holder);
+    cleanup();
     done(false, '没有可导出的报告内容');
     return;
   }
@@ -3613,45 +3637,122 @@ function buildPDF(name, done) {
   var pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait', compress: true });
   var pageW = pdf.internal.pageSize.getWidth();
   var pageH = pdf.internal.pageSize.getHeight();
-  var margin = 22;
+  var margin = 18;
   var contentW = pageW - margin * 2;
-  var contentH = pageH - margin * 2;
-  var firstPage = true;
+  var y = margin;   // 当前页已用到的纵向位置（pt）
 
   var chain = Promise.resolve();
+
+  function renderEl(el) {
+    var h = el.offsetHeight;
+    // 尽量提高分辨率（约 300DPI），同时控制画布高度不超出手机上限
+    var scale = Math.min(2.6, 12000 / Math.max(h, 1));
+    if (scale < 0.4) scale = 0.4;
+    return html2canvas(el, { scale: scale, backgroundColor: '#ffffff', logging: false });
+  }
+
+  // 把一张整块截图按页切片（用于非表格板块）
+  function sliceToPages(canvas) {
+    var pxPerPt = canvas.width / contentW;
+    var offset = 0, guard = 0;
+    while (offset < canvas.height - 1 && guard < 300) {
+      guard++;
+      var availPt = pageH - margin - y;
+      if (availPt < 30) { pdf.addPage(); y = margin; availPt = pageH - margin - y; }
+      var slicePx = Math.min(Math.floor(availPt * pxPerPt), canvas.height - offset);
+      if (slicePx < 1) { pdf.addPage(); y = margin; continue; }
+      var tmp = document.createElement('canvas');
+      tmp.width = canvas.width;
+      tmp.height = slicePx;
+      tmp.getContext('2d').drawImage(canvas, 0, offset, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+      var drawH = slicePx / pxPerPt;
+      pdf.addImage(tmp.toDataURL('image/jpeg', 0.95), 'JPEG', margin, y, contentW, drawH, undefined, 'FAST');
+      y += drawH;
+      offset += slicePx;
+      if (offset < canvas.height - 1) { pdf.addPage(); y = margin; }
+    }
+    y += 6;
+  }
+
+  // 表格按页拆行渲染：每页重复板块标题与表头，避免跨页断行、无表头
+  function addTablePages(el, table, start) {
+    start = start || 0;
+    var rows = [];
+    for (var bi = 0; bi < table.tBodies.length; bi++) {
+      rows = rows.concat(Array.prototype.slice.call(table.tBodies[bi].rows));
+    }
+    if (start >= rows.length) return Promise.resolve();
+
+    var headEl = table.tHead;
+    var titleEl = el.querySelector('.section-title');
+    var sample = rows.slice(0, Math.min(20, rows.length - start));
+    var sumH = 0;
+    for (var s = 0; s < sample.length; s++) sumH += (sample[s].offsetHeight || 40);
+    var rowH = Math.max(26, sumH / Math.max(sample.length, 1));
+    var headH = headEl ? headEl.offsetHeight : 0;
+    var titleH = titleEl ? titleEl.offsetHeight : 0;
+    var cssPxPerPt = el.offsetWidth / contentW;
+
+    var availPt = pageH - margin - y;
+    var minPt = (titleH + headH + rowH * 3) / cssPxPerPt;
+    if (availPt < minPt) { pdf.addPage(); y = margin; availPt = pageH - margin - y; }
+    var pxAvail = availPt * cssPxPerPt;
+    var capacity = Math.floor((pxAvail - titleH - headH - 14) / rowH);
+    if (capacity < 3) capacity = 3;
+    var n = Math.min(capacity, rows.length - start);
+
+    var frag = el.cloneNode(false);
+    frag.className = (el.className || '') + ' pdf-seg';
+    if (titleEl) frag.appendChild(titleEl.cloneNode(true));
+    var wrap = table.parentNode.cloneNode(false);
+    var t = table.cloneNode(false);
+    if (headEl) t.appendChild(headEl.cloneNode(true));
+    var tb = document.createElement('tbody');
+    for (var i = start; i < start + n; i++) tb.appendChild(rows[i].cloneNode(true));
+    t.appendChild(tb);
+    wrap.appendChild(t);
+    frag.appendChild(wrap);
+    holder.appendChild(frag);
+    // 实测片段高度，超出可用空间就减少行数，避免最后一行被页面裁掉
+    var limit = pxAvail - 2;
+    while (tb.rows.length > 3 && frag.offsetHeight > limit) {
+      tb.removeChild(tb.lastChild);
+    }
+    n = tb.rows.length;
+
+    return renderEl(frag).then(function(canvas) {
+      holder.removeChild(frag);
+      var pxPerPt = canvas.width / contentW;
+      var hPt = canvas.height / pxPerPt;
+      if (hPt > pageH - margin * 2) {
+        // 估算偏差导致过高时，退回按页切片
+        sliceToPages(canvas);
+      } else {
+        if (y + hPt > pageH - margin + 1) { pdf.addPage(); y = margin; }
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', margin, y, contentW, hPt, undefined, 'FAST');
+        y += hPt + 4;
+      }
+      return addTablePages(el, table, start + n);
+    });
+  }
+
   blocks.forEach(function(el) {
     chain = chain.then(function() {
-      var h = el.offsetHeight;
-      // 控制画布高度，避免长表格超出手机浏览器画布上限
-      var scale = Math.min(2, 12000 / Math.max(h, 1));
-      if (scale < 0.35) scale = 0.35;
-      return html2canvas(el, { scale: scale, backgroundColor: '#ffffff', logging: false }).then(function(canvas) {
-        var pxPerPt = canvas.width / contentW;
-        var pageSlice = Math.floor(contentH * pxPerPt);
-        var y = 0, guard = 0;
-        while (y < canvas.height && guard < 120) {
-          guard++;
-          var sliceH = Math.min(pageSlice, canvas.height - y);
-          if (!firstPage) pdf.addPage();
-          firstPage = false;
-          var tmp = document.createElement('canvas');
-          tmp.width = canvas.width;
-          tmp.height = sliceH;
-          tmp.getContext('2d').drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-          pdf.addImage(tmp.toDataURL('image/jpeg', 0.9), 'JPEG', margin, margin, contentW, sliceH / pxPerPt, undefined, 'FAST');
-          y += sliceH;
-        }
-      });
+      var table = el.querySelector('table.rpt');
+      if (table && table.tBodies.length && table.tBodies[0].rows.length >= 8) {
+        return addTablePages(el, table, 0);
+      }
+      return renderEl(el).then(sliceToPages);
     });
   });
 
   chain.then(function() {
     var blob = pdf.output('blob');
-    if (holder.parentNode) holder.parentNode.removeChild(holder);
+    cleanup();
     deliverPDF(blob, name);
     done(true);
   }).catch(function(err) {
-    if (holder.parentNode) holder.parentNode.removeChild(holder);
+    cleanup();
     done(false, (err && err.message) ? err.message : String(err));
   });
 }
